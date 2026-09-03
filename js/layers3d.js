@@ -1,7 +1,15 @@
 /* ============================================================
    Dimensiones Anidadas — layers3d.js
-   Visualización Three.js de las 4 capas anidadas — versión rica
-   Cada capa tiene una representación visual propia e interactiva.
+   Visualización Three.js con NARRATIVA HOLOGRÁFICA.
+
+   La escena crece siguiendo el scroll / la sección activa:
+     1D → solo la cuerda vibrando
+     2D → la cuerda barre y GENERA una membrana
+     3D → la membrana se cierra envolviendo un volumen interior
+     4D → el volumen queda envuelto por la hiperesfera que proyecta fuerzas
+
+   De este modo la visualización cuenta la historia del modelo:
+   la información viaja de capa en capa (principio holográfico).
    ============================================================ */
 
 (function (window, document) {
@@ -11,34 +19,34 @@
 
   const THREE = window.THREE;
 
-  const COLORS = {
-    1: 0x8B5CF6,  // violeta
-    2: 0x3B82F6,  // azul
-    3: 0x10B981,  // verde
-    4: 0xF59E0B   // dorado
+  const COL = {
+    1: 0x8B5CF6, 2: 0x3B82F6, 3: 0x10B981, 4: 0xF59E0B
   };
   const COL_HEX = {
     1: '#8B5CF6', 2: '#3B82F6', 3: '#10B981', 4: '#F59E0B'
   };
 
-  const CAMERA_ZOOM = {
-    intro: 34, 1: 8, 2: 13, 3: 21, 4: 30, 5: 30, 6: 30, 7: 24, 8: 30, 9: 30
-  };
-  // Visibilidad por capa [1D, 2D, 3D, 4D]
-  const V = {
-    intro: [0.9, 0.35, 0.3, 0.25],
-    1:     [1.0, 0.0, 0.0, 0.0],
-    2:     [0.8, 0.9, 0.0, 0.0],
-    3:     [0.4, 0.55, 0.9, 0.0],
-    4:     [0.3, 0.4, 0.6, 0.92],
-    5:     [0.5, 0.6, 0.7, 0.82],
-    6:     [0.5, 0.6, 0.7, 0.82],
-    7:     [0.4, 0.5, 0.8, 0.4],
-    8:     [0.5, 0.6, 0.7, 0.82],
-    9:     [1.0, 1.0, 1.0, 1.0]
+  const STRING_LEN = 6;      // longitud de la cuerda
+  const STRING_SEG = 200;    // subdivisiones de la cuerda
+
+  // ---------- Escenas: qué mostrar y a qué distancia ----------
+  // "show": qué grupos están visibles.  "zoom": distancia cámara.
+  // "membraneScale": hasta dónde crece la membrana (nace en la capa 2).
+  // "wrap3D": cuánto se cierra la membrana en superficie 3D (0=abierta, 1=cerrada)
+  const SCENES = {
+    intro: { show: [1, 2, 3, 4], zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
+    1:     { show: [1],          zoom: 5.5, membraneScale: 0, wrap3D: 0, stringShow: 1 },
+    2:     { show: [1, 2],        zoom: 10,  membraneScale: 1, wrap3D: 0, stringShow: 0.9 },
+    3:     { show: [1, 2, 3],     zoom: 16,  membraneScale: 1, wrap3D: 1, stringShow: 0.75 },
+    4:     { show: [1, 2, 3, 4],  zoom: 25,  membraneScale: 1, wrap3D: 1, stringShow: 0.65 },
+    5:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
+    6:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
+    7:     { show: [1, 2, 3, 4],  zoom: 24,  membraneScale: 1, wrap3D: 1, stringShow: 0.6 },
+    8:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
+    9:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 }
   };
 
-  // ---------- Renderer ----------
+  // ---------- Renderer + escena ----------
   const holder = document.createElement('div');
   holder.style.position = 'fixed';
   holder.style.inset = '0';
@@ -47,8 +55,6 @@
   holder.id = 'bg-3d';
   document.body.prepend(holder);
 
-  // Si WebGL no está disponible, el sitio funciona igualmente con los
-  // fondos CSS; no rompemos la página.
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -65,250 +71,410 @@
   camera.position.set(0, 0, 34);
   camera.lookAt(0, 0, 0);
 
-  // Luz para materiales con brillo
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
   scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5, 8, 10);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+  dirLight.position.set(6, 9, 12);
   scene.add(dirLight);
-  const pointLight = new THREE.PointLight(0xffffff, 0.5);
-  pointLight.position.set(-5, -3, 6);
+  const pointLight = new THREE.PointLight(0xffffff, 0.6, 50);
+  pointLight.position.set(-4, -3, 8);
   scene.add(pointLight);
-  const layerRoot = new THREE.Group();
-  scene.add(layerRoot);
 
-  function ease(a, b, k) { return a + (b - a) * k; }
-
-  const dims = {}; // contendrá los elementos animables de cada capa
+  function ease(a, b, k, dt) { return a + (b - a) * (1 - Math.exp(-k * dt)); }
 
   // ============================================================
-  // CAPA 1 — La cuerda vibrante (1D)
+  // CAPA 1 — LA CUERDA VIBRANTE
   // ============================================================
-  function buildLayer1() {
-    const g = new THREE.Group();
+  const stringGroup = new THREE.Group();
+  scene.add(stringGroup);
 
-    // La cuerda: una línea de puntos que vibra en modo armónico (3D)
-    const seg = 64;
-    const pts = [];
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(seg * 3);
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({ color: COLORS[1], size: 0.05, transparent: true, opacity: 1 });
-    const line = new THREE.Points(geo, mat);
-    g.add(line);
+  // Malla de la cuerda (tubo fino de grosor variable)
+  const stringGeo = new THREE.BufferGeometry();
+  const stringPos = new Float32Array(STRING_SEG * 3);
+  stringGeo.setAttribute('position', new THREE.BufferAttribute(stringPos, 3));
+  const stringMat = new THREE.PointsMaterial({ color: COL[1], size: 0.09, transparent: true, opacity: 0.95 });
+  const stringMesh = new THREE.Points(stringGeo, stringMat);
+  stringGroup.add(stringMesh);
 
-    // Glow alrededor (esfera difusa pequeña)
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 24, 24),
-      new THREE.MeshBasicMaterial({ color: COLORS[1], transparent: true, opacity: 0.25 })
-    );
-    g.add(glow);
+  // Hilo continuo (linea con ancho) para que se lea como cuerda
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(STRING_SEG * 3), 3));
+  const lineMat = new THREE.LineBasicMaterial({ color: COL[1], transparent: true, opacity: 0.9 });
+  const lineMesh = new THREE.Line(lineGeo, lineMat);
+  stringGroup.add(lineMesh);
 
-    // Partículas hijo que "emanan" (partículas generadas por la vibración)
-    const particleCount = 60;
-    const pGeo = new THREE.BufferGeometry();
-    const pPos = new Float32Array(particleCount * 3);
-    const pData = [];
-    for (let i = 0; i < particleCount; i++) {
-      pData.push({
-        speed: 0.2 + Math.random() * 0.5,
-        dir: Math.random() * Math.PI * 2,
-        off: Math.random() * 10
-      });
-    }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    const pMat = new THREE.PointsMaterial({ color: COLORS[1], size: 0.04, transparent: true, opacity: 0.8 });
-    const particles = new THREE.Points(pGeo, pMat);
-    g.add(particles);
+  // Glow central
+  const stringGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6, 24, 24),
+    new THREE.MeshBasicMaterial({ color: COL[1], transparent: true, opacity: 0.22 })
+  );
+  stringGroup.add(stringGlow);
 
-    scene.add(g);
-    dims[1] = { g, line, positions, particles, pData, particleCount, seg, glow };
-  }
-
-  // ============================================================
-  // CAPA 2 — La membrana ondulada (2D) domain wall
-  // ============================================================
-  function buildLayer2() {
-    const g = new THREE.Group();
-
-    const size = 5, seg = 32;
-    const geo = new THREE.PlaneGeometry(size, size, seg, seg);
-    const mat = new THREE.MeshPhongMaterial({
-      color: COLORS[2],
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.6,
-      wireframe: false,
-      emissive: COLORS[2],
-      emissiveIntensity: 0.3,
-      shininess: 40
+  // Partículas hijas (cada vibración = partícula)
+  const childCount = 90;
+  const childGeo = new THREE.BufferGeometry();
+  const childPos = new Float32Array(childCount * 3);
+  const childData = [];
+  for (let i = 0; i < childCount; i++) {
+    childData.push({
+      dir: Math.random() * Math.PI * 2,
+      speed: 0.5 + Math.random() * 0.9,
+      off: Math.random() * 20
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    g.add(mesh);
-    mesh.rotation.y = Math.PI / 2; // de pié, como pared
+  }
+  childGeo.setAttribute('position', new THREE.BufferAttribute(childPos, 3));
+  const childMat = new THREE.PointsMaterial({ color: COL[1], size: 0.05, transparent: true, opacity: 0.85 });
+  const childMesh = new THREE.Points(childGeo, childMat);
+  stringGroup.add(childMesh);
 
-    // Rejilla de puntos sobre la membrana (fluctuaciones)
-    const sGeo = new THREE.BufferGeometry();
-    const sCount = 40 * 40;
-    const sPos = new Float32Array(sCount * 3);
-    sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-    const sMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.04, transparent: true, opacity: 0.7 });
-    const ptsMesh = new THREE.Points(sGeo, sMat);
-    g.add(ptsMesh);
+  const dims = {
+    1: {
+      positions: stringPos, linePos: lineGeo.attributes.position.array,
+      childPos, childData, childCount,
+      glow: stringGlow
+    }
+  };
 
-    scene.add(g);
-    const vertices = geo.attributes.position;
-    dims[2] = { g, mesh, vertices, pts: sGeo.attributes.position, seg, size, ptsMesh };
+  function updateString(t, vis, wrap3D, stringShow) {
+    const d = dims[1];
+    const amp = 0.8 * stringShow;
+    for (let i = 0; i < STRING_SEG; i++) {
+      const u = (i / (STRING_SEG - 1) - 0.5) * STRING_LEN;
+      // varios modos armónicos superpuestos
+      const y = Math.sin(u * 1.6 + t * 2.2) * amp +
+                Math.sin(u * 4.2 - t * 3.1) * 0.22 * amp;
+      const z = Math.cos(u * 2.6 + t * 1.7) * 0.4 * amp +
+                Math.sin(u * 6.1 + t * 4.0) * 0.12 * amp;
+      d.positions[i * 3]     = u;
+      d.positions[i * 3 + 1] = y;
+      d.positions[i * 3 + 2] = z;
+      d.linePos[i * 3]     = u;
+      d.linePos[i * 3 + 1] = y;
+      d.linePos[i * 3 + 2] = z;
+    }
+    stringGeo.attributes.position.needsUpdate = true;
+    lineGeo.attributes.position.needsUpdate = true;
+
+    // Partículas
+    for (let i = 0; i < d.childCount; i++) {
+      const c = d.childData[i];
+      const r = 0.7 + 1.1 * Math.abs(Math.sin(t * c.speed + c.off));
+      const a = c.dir + t * 0.25;
+      d.childPos[i * 3]     = Math.cos(a) * r;
+      d.childPos[i * 3 + 1] = Math.sin(a) * r;
+      d.childPos[i * 3 + 2] = Math.sin(c.off * 7 + t * c.speed * 0.6) * r * 0.8;
+    }
+    childGeo.attributes.position.needsUpdate = true;
+
+    const o = vis ? vis : 1;
+    stringMesh.material.opacity = 0.95 * o;
+    lineMesh.material.opacity = 0.9 * o;
+    childMesh.material.opacity = 0.85 * o;
+    stringGlow.material.opacity = 0.22 * (wrap3D > 0.5 ? stringShow : 1) * o;
+    stringGlow.scale.setScalar(1 + 0.25 * Math.sin(t * 4) * stringShow);
+
+    stringGroup.rotation.y = t * 0.1;
+    stringGroup.rotation.x = Math.sin(t * 0.25) * 0.12;
   }
 
   // ============================================================
-  // CAPA 3 — El volumen con órbitas estables (3D)
+  // CAPA 2 — LA MEMBRANA (domain wall) que NACE de la cuerda
   // ============================================================
-  function buildLayer3() {
-    const g = new THREE.Group();
+  const membraneGroup = new THREE.Group();
+  scene.add(membraneGroup);
 
-    // Núcleo central
-    const core = new THREE.Mesh(
-      new THREE.SphereGeometry(0.4, 16, 16),
-      new THREE.MeshPhongMaterial({ color: COLORS[3], emissive: COLORS[3], emissiveIntensity: 0.5, shininess: 80 })
+  const M_SIZE = 5.5, M_SEG = 40;
+  const membraneGeo = new THREE.PlaneGeometry(M_SIZE, M_SIZE, M_SEG, M_SEG);
+  const membraneMat = new THREE.MeshPhongMaterial({
+    color: COL[2], side: THREE.DoubleSide, transparent: true, opacity: 0.55,
+    emissive: COL[2], emissiveIntensity: 0.25, shininess: 45
+  });
+  const membrane = new THREE.Mesh(membraneGeo, membraneMat);
+  membrane.scale.set(0.0001, 0.0001, 1); // nace pequeña
+  membraneGroup.add(membrane);
+
+  // Puntos de fluctuación sobre la membrana
+  const mPtsGeo = new THREE.BufferGeometry();
+  const mPtsCount = 50 * 50;
+  const mPtsPos = new Float32Array(mPtsCount * 3);
+  mPtsGeo.setAttribute('position', new THREE.BufferAttribute(mPtsPos, 3));
+  const mPtsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.035, transparent: true, opacity: 0.7 });
+  const mPts = new THREE.Points(mPtsGeo, mPtsMat);
+  membraneGroup.add(mPts);
+
+  const mVert = membraneGeo.attributes.position;
+  dims[2] = { membrane, mVert, mPts, mPtsPos, mPtsCount, M_SIZE, M_SEG };
+
+  function updateMembrane(t, vis, membraneScale, wrap3D) {
+    const d = dims[2];
+    const o = vis ? vis : 1;
+
+    // La membrana "nace y crece" desde la cuerda (escala)
+    const msc = Math.max(0.0001, membraneScale || 0.0001);
+    // en la capa 2 queda abierta (plano); en la 3+ se cierra sobre un volumen (ver escala y pos)
+    membrane.scale.set(msc, msc, 1);
+
+    // Ondulación
+    const amp = 0.35;
+    const p = d.mVert.array;
+    for (let i = 0; i <= M_SEG; i++) {
+      for (let j = 0; j <= M_SEG; j++) {
+        const idx = (i * (M_SEG + 1) + j) * 3;
+        const x = (i / M_SEG - 0.5) * M_SIZE;
+        const y = (j / M_SEG - 0.5) * M_SIZE;
+        // ondas viajeras
+        let z = Math.sin(x * 1.4 + t * 1.6) * Math.cos(y * 1.4 + t * 1.2) * amp;
+        z += Math.sin((x + y) * 3 + t * 3) * 0.08;
+        p[idx]     = x;
+        p[idx + 1] = y;
+        p[idx + 2] = z;
+      }
+    }
+    d.mVert.needsUpdate = true;
+    // Recalcular normales para el material Phong (en r128 es método de la geometría)
+    try {
+      membraneGeo.computeVertexNormals();
+    } catch (e) { /* ignorar */ }
+
+    // Puntos sobre la membrana
+    const sp = d.mPtsPos;
+    for (let i = 0; i < 50; i++) {
+      for (let j = 0; j < 50; j++) {
+        const idx = (i * 50 + j) * 3;
+        const x = (i / 49 - 0.5) * M_SIZE;
+        const y = (j / 49 - 0.5) * M_SIZE;
+        const z = Math.sin(x * 1.4 + t * 1.6) * Math.cos(y * 1.4 + t * 1.2) * amp;
+        sp[idx]     = x;
+        sp[idx + 1] = y;
+        sp[idx + 2] = z;
+      }
+    }
+    mPtsGeo.attributes.position.needsUpdate = true;
+
+    membraneMat.opacity = 0.55 * o;
+    mPtsMat.opacity = 0.7 * o;
+
+    // A medida que la membrana se cierra (wrap3D→1) sobre un volumen,
+    // el plano se repliega/y se atenúa: pasa a ser la esfera envolvente.
+    membrane.visible = wrap3D < 0.5;
+    mPts.visible = wrap3D < 0.5;
+
+    // Separación de domain walls determina masas → leve rotación
+    membraneGroup.rotation.y = t * 0.08;
+    membraneGroup.rotation.z = Math.sin(t * 0.2) * 0.05;
+  }
+
+  // ============================================================
+  // CAPA 3 — EL VOLUMEN (sistema interior envuelto por la membrana)
+  // ============================================================
+  const volumeGroup = new THREE.Group();
+  scene.add(volumeGroup);
+
+  // Núcleo central (materia estable 3D)
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 20, 20),
+    new THREE.MeshPhongMaterial({ color: COL[3], emissive: COL[3], emissiveIntensity: 0.5, shininess: 90 })
+  );
+  volumeGroup.add(core);
+
+  // Órbitas estables (teorema de Ehrenfest)
+  const ORBITS = [
+    { r: 1.2, speed: 1.6, tilt: 0.4 },
+    { r: 1.9, speed: 1.1, tilt: 1.3 },
+    { r: 2.6, speed: 0.75, tilt: 2.2 }
+  ];
+  const orbitRings = ORBITS.map((o) => {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(o.r, 0.02, 8, 72),
+      new THREE.MeshBasicMaterial({ color: COL[3], transparent: true, opacity: 0.4 })
     );
-    g.add(core);
+    ring.rotation.x = o.tilt;
+    ring.rotation.z = 0.4;
+    volumeGroup.add(ring);
+    return ring;
+  });
+  const electrons = ORBITS.map((o) => {
+    const e = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 12, 12),
+      new THREE.MeshBasicMaterial({ color: COL[3] })
+    );
+    e.material.color = new THREE.Color(COL_HEX[3]);
+    volumeGroup.add(e);
+    return { mesh: e, o };
+  });
 
-    // Electrones orbitando en órbitas estables (demuestra Ehrenfest)
-    const orbits = [
-      { radius: 1.0, speed: 1.5, tilt: 0.3, phase: 0 },
-      { radius: 1.6, speed: 1.0, tilt: 1.2, phase: 2 },
-      { radius: 2.2, speed: 0.7, tilt: 2.1, phase: 4 }
-    ];
+  // Frontera "holográfica": la info del 3D vive en el 2D que lo envuelve.
+  // Representamos la envolvente como una esfera traslúcida de rejilla.
+  const holoshell = new THREE.Mesh(
+    new THREE.SphereGeometry(3.2, 40, 40),
+    new THREE.MeshBasicMaterial({ color: COL[3], wireframe: true, transparent: true, opacity: 0.14 })
+  );
+  volumeGroup.add(holoshell);
 
-    // Anillos de órbita
-    const orbitMeshes = orbits.map((o) => {
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(o.radius, 0.015, 6, 64),
-        new THREE.MeshBasicMaterial({ color: COLORS[3], transparent: true, opacity: 0.35 })
+  dims[3] = { core, electrons, orbitRings, holoshell };
+
+  function updateVolume(t, vis, wrap3D) {
+    const d = dims[3];
+    const o = vis ? vis : 1;
+
+    const ws = Math.max(0, wrap3D || 0);
+    // El volumen (núcleo + órbitas) solo es visible cuando la membrana
+    // se cierra (wrap3D → 1): es la materia estable del interior 3D.
+    core.visible = ws > 0.05;
+    d.orbitRings.forEach((r) => { r.visible = ws > 0.05; });
+    d.electrons.forEach((el) => { el.mesh.visible = ws > 0.05; });
+
+    // La esfera envolvente ("domain wall" cerrada que guarda la info 3D):
+    // crece y se ilumina a medida que la membrana envuelve.
+    const shellScale = 0.2 + 0.8 * ws;
+    holoshell.scale.setScalar(shellScale);
+    holoshell.material.opacity = (0.18 + 0.3 * ws) * o;
+    holoshell.visible = ws > 0.02;
+
+    // electrones orbitando
+    d.electrons.forEach((el, i) => {
+      const a = t * el.o.speed + i;
+      const x = el.o.r * Math.cos(a);
+      const z = el.o.r * Math.sin(a);
+      el.mesh.position.set(x, 0, z);
+      el.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), el.o.tilt);
+    });
+
+    d.orbitRings.forEach((ring, i) => {
+      ring.material.opacity = 0.4 * o;
+    });
+
+    core.scale.setScalar(1 + 0.08 * Math.sin(t * 3));
+    volumeGroup.rotation.y = t * 0.25;
+  }
+
+  // ============================================================
+  // CAPA 4 — LA HIPERESFERA (proyecta fuerzas hacia dentro)
+  // ============================================================
+  const hypersphereGroup = new THREE.Group();
+  scene.add(hypersphereGroup);
+
+  const HS_R = 4.6;
+  const hypersphere = new THREE.Mesh(
+    new THREE.SphereGeometry(HS_R, 48, 48),
+    new THREE.MeshPhongMaterial({
+      color: COL[4], wireframe: true, transparent: true, opacity: 0.28,
+      emissive: COL[4], emissiveIntensity: 0.2
+    })
+  );
+  hypersphereGroup.add(hypersphere);
+
+  // Conchas internas (evocación de hiperespacio)
+  for (let i = 1; i <= 3; i++) {
+    const sh = new THREE.Mesh(
+      new THREE.SphereGeometry(HS_R * (1 - i * 0.06), 40, 40),
+      new THREE.MeshBasicMaterial({ color: COL[4], wireframe: true, transparent: true, opacity: 0.05 })
+    );
+    hypersphereGroup.add(sh);
+  }
+
+  // Rayos de proyección 4D→3D (partículas que viajan hacia el centro)
+  const rayCount = 160;
+  const rayGeo = new THREE.BufferGeometry();
+  const rayPos = new Float32Array(rayCount * 3);
+  const rayData = [];
+  for (let i = 0; i < rayCount; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    rayData.push({ theta, phi, speed: 0.4 + Math.random() * 0.7, off: Math.random() * 30 });
+  }
+  rayGeo.setAttribute('position', new THREE.BufferAttribute(rayPos, 3));
+  const rayMat = new THREE.PointsMaterial({ color: COL[4], size: 0.06, transparent: true, opacity: 0.9 });
+  const rays = new THREE.Points(rayGeo, rayMat);
+  hypersphereGroup.add(rays);
+
+  dims[4] = { hypersphere, rays, rayData, rayCount, HS_R };
+
+  function updateHypersphere(t, vis) {
+    const d = dims[4];
+    const o = vis ? vis : 1;
+
+    d.hypersphere.rotation.x = t * 0.08;
+    d.hypersphere.rotation.y = t * 0.12;
+    d.hypersphere.material.opacity = 0.28 * o;
+
+    // rayos viajan del borde hacia el centro
+    const rp = d.rays.geometry.attributes.position.array;
+    const up = new THREE.Vector3();
+    for (let i = 0; i < d.rayCount; i++) {
+      const rd = d.rayData[i];
+      const frac = (t * rd.speed + rd.off) % 1;
+      const rad = d.HS_R * Math.pow(1 - frac, 1.2);
+      up.set(
+        Math.sin(rd.phi) * Math.cos(rd.theta),
+        Math.sin(rd.phi) * Math.sin(rd.theta),
+        Math.cos(rd.phi)
       );
-      ring.rotation.x = o.tilt;
-      ring.rotation.z = o.phase * 0.5;
-      g.add(ring);
-      return ring;
-    });
-
-    // Electrones (puntos brillantes)
-    const electronGeo = new THREE.SphereGeometry(0.09, 10, 10);
-    const electronMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-    const electrons = orbits.map((o) => {
-      const e = new THREE.Mesh(electronGeo, electronMat.clone());
-      e.material.color = new THREE.Color(COL_HEX[3]);
-      g.add(e);
-      return { mesh: e, orbit: o };
-    });
-
-    // "Huella" de la superficie frontera (esfera tenue de volumen)
-    const boundary = new THREE.Mesh(
-      new THREE.SphereGeometry(3.1, 32, 32),
-      new THREE.MeshBasicMaterial({ color: COLORS[3], wireframe: true, transparent: true, opacity: 0.1 })
-    );
-    g.add(boundary);
-
-    scene.add(g);
-    dims[3] = { g, core, orbits, electrons, orbitMeshes, boundary };
-  }
-
-  // ============================================================
-  // CAPA 4 — El hiperespacio (4D) proyectando fuerzas
-  // ============================================================
-  function buildLayer4() {
-    const g = new THREE.Group();
-
-    // Hiperesfera: esfera grande con rejilla y brillo
-    const radius = 5.2;
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 48, 48),
-      new THREE.MeshPhongMaterial({
-        color: COLORS[4],
-        wireframe: true,
-        transparent: true,
-        opacity: 0.3,
-        emissive: COLORS[4],
-        emissiveIntensity: 0.2
-      })
-    );
-    g.add(sphere);
-
-    // Capa densa tipo hilera (evocación 4D)
-    const innerShell = new THREE.Mesh(
-      new THREE.SphereGeometry(radius * 0.92, 48, 48),
-      new THREE.MeshBasicMaterial({ color: COLORS[4], transparent: true, opacity: 0.06, side: THREE.BackSide })
-    );
-    g.add(innerShell);
-
-    // Proyección: partículas que viajan hacia el interior (fuerzas EM/gravedad)
-    const pCount = 120;
-    const pGeo = new THREE.BufferGeometry();
-    const pPos = new Float32Array(pCount * 3);
-    const pData = [];
-    for (let i = 0; i < pCount; i++) {
-      // Posición inicial en la cáscara esférica
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      pData.push({ theta, phi, speed: 0.4 + Math.random() * 0.6, off: Math.random() * 5 });
+      rp[i * 3]     = up.x * rad;
+      rp[i * 3 + 1] = up.y * rad;
+      rp[i * 3 + 2] = up.z * rad;
     }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    const pMat = new THREE.PointsMaterial({ color: COLORS[4], size: 0.06, transparent: true, opacity: 0.9 });
-    const rays = new THREE.Points(pGeo, pMat);
-    g.add(rays);
+    d.rays.geometry.attributes.position.needsUpdate = true;
+    d.rays.material.opacity = 0.9 * o;
 
-    // Lente de "proyección" — lineas radiales
-    scene.add(g);
-    dims[4] = { g, sphere, rays, pData, pCount, pPos, radius };
+    hypersphereGroup.rotation.y = t * 0.02;
   }
-
-  buildLayer1();
-  buildLayer2();
-  buildLayer3();
-  buildLayer4();
 
   // ============================================================
   // Estrellas de fondo
   // ============================================================
-  const starCount = 1200;
+  const starCount = 1100;
   const sG = new THREE.BufferGeometry();
   const sP = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount; i++) {
-    const r = 14 + Math.random() * 45;
-    const t = Math.random() * Math.PI * 2;
-    const p = Math.acos(2 * Math.random() - 1);
-    sP[i * 3] = r * Math.sin(p) * Math.cos(t);
-    sP[i * 3 + 1] = r * Math.sin(p) * Math.sin(t);
-    sP[i * 3 + 2] = r * Math.cos(p);
+    const r = 12 + Math.random() * 50;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.acos(2 * Math.random() - 1);
+    sP[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    sP[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+    sP[i * 3 + 2] = r * Math.cos(ph);
   }
   sG.setAttribute('position', new THREE.BufferAttribute(sP, 3));
-  const stars = new THREE.Points(sG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.5 }));
+  const stars = new THREE.Points(sG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.45 }));
   scene.add(stars);
 
   // ============================================================
-  // Estado
+  // Estado y navegación
   // ============================================================
   const state = {
     active: 'intro',
-    targetZoom: CAMERA_ZOOM.intro,
-    vis: V.intro.slice(),
+    targetZoom: 34,
+    vis: { 1: 0.8, 2: 0.8, 3: 0.8, 4: 0.5 },
+    membraneScale: 1,
+    wrap3D: 1,
+    stringShow: 0.8,
     mouseX: 0, mouseY: 0
   };
-  let targetRotY = 0, targetRotX = 0;
 
-  // Interactividad con el mouse (rotación sutil)
   window.addEventListener('mousemove', (e) => {
     state.mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
     state.mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
   });
 
+  const soft = {
+    zoom: 34,
+    vis1: 0.8, vis2: 0.8, vis3: 0.8, vis4: 0.5,
+    membraneScale: 1, wrap3D: 1, stringShow: 0.8
+  };
+
   function onSectionChange(e) {
     const map = { intro: 'intro', dim1: '1', dim2: '2', dim3: '3', dim4: '4', dim5: '5', dim6: '6', dim7: '7', dim8: '8', dim9: '9' };
     const key = map[e.detail.id] || 'intro';
+    const s = SCENES[key] || SCENES.intro;
     state.active = key;
-    state.targetZoom = CAMERA_ZOOM[key] ?? 30;
-    state.vis = (V[key] ? V[key].slice() : V.intro.slice());
+    state.targetZoom = s.zoom;
+    // targets de visibilidad por grupo (0 si no se muestra)
+    const has = {};
+    [1, 2, 3, 4].forEach((n) => { has[n] = s.show.includes(n) ? 1 : 0; });
+    state.vis = has;
+    state.membraneScale = s.membraneScale;
+    state.wrap3D = s.wrap3D;
+    state.stringShow = s.stringShow;
   }
   window.addEventListener('sectionchange', onSectionChange);
 
@@ -319,165 +485,34 @@
   });
 
   // ============================================================
-  // Loop de animación
+  // Loop principal
   // ============================================================
-  const visOpacity = { 1: 0.9, 2: 0.35, 3: 0.3, 4: 0.25 };
-
-  function updateLayer1(t) {
-    const d = dims[1];
-    const target = state.vis[0] ?? 0;
-    visOpacity[1] = ease(visOpacity[1], target, 3, 0.016);
-
-    // Vibración armónica en 3D (cuerda)
-    const pos = d.line.geometry.attributes.position.array;
-    for (let i = 0; i < d.seg; i++) {
-      const u = (i / (d.seg - 1)) * 4 - 2; // -2..2
-      const amp = 0.25;
-      // Modos superpuestos
-      pos[i * 3]     = Math.sin(u * 1.2 + t * 2) * amp;
-      pos[i * 3 + 1] = Math.cos(u * 2.4 + t * 1.4) * amp * 0.6;
-      pos[i * 3 + 2] = u * 0.35;
-    }
-    d.line.geometry.attributes.position.needsUpdate = true;
-    d.line.material.opacity = visOpacity[1];
-
-    // Glow
-    d.glow.material.opacity = 0.25 * visOpacity[1];
-    const pulse = 1 + 0.2 * Math.sin(t * 5);
-    d.glow.scale.set(pulse, pulse, pulse);
-
-    // Partículas que emanan de la cuerda
-    const pp = d.particles.geometry.attributes.position.array;
-    for (let i = 0; i < d.particleCount; i++) {
-      const dt = d.pData[i];
-      const r = 0.4 + 0.9 * Math.abs(Math.sin(t * dt.speed + dt.off));
-      const a = dt.dir + t * 0.3;
-      // Partículas generadas por la vibración dispersándose
-      pp[i * 3]     = Math.cos(a) * r;
-      pp[i * 3 + 1] = Math.sin(a) * r;
-      pp[i * 3 + 2] = Math.sin(dt.off * 11 + t * dt.speed * 0.8) * r;
-    }
-    d.particles.geometry.attributes.position.needsUpdate = true;
-    d.particles.material.opacity = 0.8 * visOpacity[1];
-
-    d.g.rotation.y = t * 0.15;
-    d.g.rotation.x = Math.sin(t * 0.2) * 0.15;
-  }
-
-  function updateLayer2(t) {
-    const d = dims[2];
-    const target = state.vis[1] ?? 0;
-    visOpacity[2] = ease(visOpacity[2], target, 3, 0.016);
-    d.mesh.material.opacity = 0.6 * visOpacity[2];
-    const p = d.vertices.array;
-
-    // Onda viajera sobre la membrana
-    for (let i = 0; i <= d.seg; i++) {
-      for (let j = 0; j <= d.seg; j++) {
-        const idx = (i * (d.seg + 1) + j) * 3;
-        const x = (i / d.seg - 0.5) * d.size;
-        const z = (j / d.seg - 0.5) * d.size;
-        const ripple = Math.sin(x * 1.5 + t * 1.5) * Math.cos(z * 1.5 + t * 1.1) * 0.4;
-        p[idx + 2] = ripple;
-      }
-    }
-    d.vertices.needsUpdate = true;
-    d.g.rotation.y = t * 0.12;
-
-    // Puntos encima
-    const sp = d.pts.array;
-    const spCount = 40;
-    for (let i = 0; i < spCount; i++) {
-      for (let j = 0; j < spCount; j++) {
-        const idx = (i * spCount + j) * 3;
-        const x = (i / spCount - 0.5) * d.size;
-        const z = (j / spCount - 0.5) * d.size;
-        sp[idx] = x;
-        sp[idx + 1] = Math.sin(x * 1.5 + t * 1.5) * Math.cos(z * 1.5 + t * 1.1) * 0.4;
-        sp[idx + 2] = z;
-      }
-    }
-    d.pts.needsUpdate = true;
-  }
-
-  function updateLayer3(t) {
-    const d = dims[3];
-    const target = state.vis[2] ?? 0;
-    visOpacity[3] = ease(visOpacity[3], target, 3, 0.016);
-
-    d.core.material.opacity = 1;
-    d.boundary.material.opacity = 0.1 * visOpacity[3];
-
-    // Electrones orbitando (órbitas estables)
-    d.electrons.forEach((el, i) => {
-      const o = el.orbit;
-      const a = t * o.speed + i;
-      const r = o.radius;
-      const x = r * Math.cos(a);
-      const z = r * Math.sin(a);
-      el.mesh.position.set(x, 0, z);
-      // aplicar tilt de la órbita aproximado
-      el.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), o.tilt);
-      el.mesh.position.applyAxisAngle(new THREE.Vector3(0, 0, 1), o.phase * 0.5);
-    });
-
-    // Rotar anillos y núcleo
-    d.g.rotation.y = t * 0.2;
-    d.core.scale.setScalar(1 + 0.1 * Math.sin(t * 3));
-
-    d.orbitMeshes.forEach((ring, i) => {
-      ring.material.opacity = 0.35 * visOpacity[3];
-    });
-  }
-
-  function updateLayer4(t) {
-    const d = dims[4];
-    const target = state.vis[3] ?? 0;
-    visOpacity[4] = ease(visOpacity[4], target, 3, 0.016);
-    d.sphere.material.opacity = 0.3 * visOpacity[4];
-
-    // Rotación de la hiperesfera
-    d.sphere.rotation.x = t * 0.08;
-    d.sphere.rotation.y = t * 0.12;
-
-    // Proyección: rayos viajando hacia el interior
-    const pp = d.rays.geometry.attributes.position.array;
-    for (let i = 0; i < d.pCount; i++) {
-      const pr = d.pData[i];
-      // recorre del borde (5.2) hacia dentro
-      const frac = (t * pr.speed + pr.off) % 1;
-      const rad = d.radius * (1 - frac);
-      const dir = new THREE.Vector3(
-        Math.sin(pr.phi) * Math.cos(pr.theta),
-        Math.sin(pr.phi) * Math.sin(pr.theta),
-        Math.cos(pr.phi)
-      );
-      pp[i * 3]     = dir.x * rad;
-      pp[i * 3 + 1] = dir.y * rad;
-      pp[i * 3 + 2] = dir.z * rad;
-    }
-    d.rays.geometry.attributes.position.needsUpdate = true;
-    d.rays.material.opacity = 0.9 * visOpacity[4];
-
-    d.g.rotation.y = t * 0.03;
-  }
-
   let last = performance.now();
   function animate(now) {
     const dt = Math.min((now - last) / 1000, 0.1);
     const t = now / 1000;
     last = now;
 
-    // Cámara con parallax por mouse
-    camera.position.z = ease(camera.position.z, state.targetZoom, 2.5, dt);
-    camera.position.x = ease(camera.position.x, state.mouseX * 1.2, 2, dt);
+    // suavizar
+    soft.zoom = ease(soft.zoom, state.targetZoom, 2.2, dt);
+    soft.vis1 = ease(soft.vis1, state.vis[1] || 0, 3, dt);
+    soft.vis2 = ease(soft.vis2, state.vis[2] || 0, 3, dt);
+    soft.vis3 = ease(soft.vis3, state.vis[3] || 0, 3, dt);
+    soft.vis4 = ease(soft.vis4, state.vis[4] || 0, 3, dt);
+    soft.membraneScale = ease(soft.membraneScale, state.membraneScale, 2.5, dt);
+    soft.wrap3D = ease(soft.wrap3D, state.wrap3D, 2.2, dt);
+    soft.stringShow = ease(soft.stringShow, state.stringShow, 2.5, dt);
+
+    // cámara con parallax por mouse
+    camera.position.z = ease(camera.position.z, soft.zoom, 2.2, dt);
+    camera.position.x = ease(camera.position.x, state.mouseX * 1.3, 2, dt);
     camera.position.y = ease(camera.position.y, -state.mouseY * 0.8, 2, dt);
     camera.lookAt(0, 0, 0);
 
-    updateLayer1(t);
-    updateLayer2(t);
-    updateLayer3(t);
-    updateLayer4(t);
+    updateString(t, soft.vis1, soft.wrap3D, soft.stringShow);
+    updateMembrane(t, soft.vis2, soft.membraneScale, soft.wrap3D);
+    updateVolume(t, soft.vis3, soft.wrap3D);
+    updateHypersphere(t, soft.vis4);
 
     stars.rotation.y = t * 0.02;
 

@@ -136,6 +136,13 @@
     setupNav();
     setupSectionObserver();
     setupReveals();
+
+    // Deep-linking: si el hash apunta a una sección, ir a ella
+    const hash = window.location.hash;
+    if (hash && document.querySelector(hash)) {
+      const el = document.querySelector(hash);
+      setTimeout(() => el.scrollIntoView({ behavior: 'auto' }), 50);
+    }
   }
 
   if (document.readyState === 'loading') {
