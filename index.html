@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Dimensiones Anidadas — el modelo 1+2+3+4: el universo como capas vibrantes que se comunican entre sí." />
+  <title>Dimensiones Anidadas — Modelo 1+2+3+4</title>
+
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/sections.css" />
+
+  <!-- Librerías CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+  <script src="https://d3js.org/d3.v7.min.js" defer></script>
+
+  <!-- Favicon inline (esfera con capas) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23F59E0B'/%3E%3Ccircle cx='16' cy='16' r='11' fill='%2310B981'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%233B82F6'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%238B5CF6'/%3E%3C/svg%3E" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Dimensiones Anidadas",
+    "description": "El modelo 1+2+3+4: el universo como dimensiones anidadas y vibrantes."
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Progress bar superior -->
+  <div id="progress" aria-hidden="true"></div>
+
+  <!-- Overlay de legibilidad sobre el fondo 3D -->
+  <div id="bg-overlay" aria-hidden="true"></div>
+
+  <!-- Navegación de capas (fijo) -->
+  <nav id="dims">
+    <button data-dim="1" class="dim-btn" aria-label="1D">1D</button>
+    <button data-dim="2" class="dim-btn" aria-label="2D">2D</button>
+    <button data-dim="3" class="dim-btn" aria-label="3D">3D</button>
+    <button data-dim="4" class="dim-btn" aria-label="4D">4D</button>
+  </nav>
+
+  <main>
+
+    <!-- ========== SECCIÓN 0: INTRO ========== -->
+    <section class="scene intro" id="intro">
+      <canvas id="particles" aria-hidden="true"></canvas>
+      <div class="intro-content">
+        <p class="eyebrow">Un modelo de la realidad</p>
+        <h1 class="intro-title">El universo<br/>tiene <span class="accent-warm">10 dimensiones</span></h1>
+        <p class="intro-sub">
+          organizadas como capas anidadas dentro de otras: una línea dentro de una
+          superficie dentro de un volumen dentro de un hipervolumen.
+        </p>
+        <p class="intro-scroll-hint">Desliza para explorar ↓</p>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 1: 1D ========== -->
+    <section class="scene layer layer-1d" id="dim1">
+      <div id="canvas-1d" class="canvas-holder" aria-hidden="true"></div>
+      <div class="layer-content">
+        <span class="layer-tag tag-1d">Capa 1 · La vibración</span>
+        <h2>1D — La vibración original</h2>
+        <p>
+          Una cuerda cerrada. Sin grosor ni estructura interna: solo vibración.
+          Cada vibración diferente es una partícula diferente — un electrón, un
+          quark, un neutrino. Todo es la misma cuerda en distintos modos.
+        </p>
+        <blockquote>No es una analogía. La cuerda física de la teoría de cuerdas es esta 1D.</blockquote>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 2: 2D ========== -->
+    <section class="scene layer layer-2d" id="dim2">
+      <div id="canvas-2d" class="canvas-holder" aria-hidden="true"></div>
+      <div class="layer-content">
+        <span class="layer-tag tag-2d">Capa 2 · La superficie</span>
+        <h2>2D — La superficie que da masa</h2>
+        <p>
+          La cuerda vibra y su historia barre una superficie real. En cosmología
+          se llaman <strong>domain walls</strong> — membranas que separan regiones
+          con diferentes propiedades del vacío.
+        </p>
+        <ul>
+          <li><strong>Materia oscura:</strong> fluctuaciones del 2D proyectadas al 3D, invisibles pero con gravedad.</li>
+          <li><strong>Energía oscura:</strong> cuando las superficies se congelan, cambian su ecuación de estado y aceleran la expansión.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 3: 3D ========== -->
+    <section class="scene layer layer-3d" id="dim3">
+      <div id="canvas-3d" class="canvas-holder" aria-hidden="true"></div>
+      <div class="layer-content">
+        <span class="layer-tag tag-3d">Capa 3 · Nuestro universo</span>
+        <h2>3D — El volumen que habitamos</h2>
+        <p>
+          La materia existe aquí porque el 3D es la única capa donde las órbitas
+          son estables matemáticamente (teorema de Ehrenfest). En 2D no se cierran;
+          en 4D los átomos colapsan.
+        </p>
+        <p>
+          La conciencia humana surge aquí: la recursividad —un sistema que puede
+          pensarse a sí mismo— requiere espacio interno para bucles causales
+          estables.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 4: 4D ========== -->
+    <section class="scene layer layer-4d" id="dim4">
+      <div id="canvas-4d" class="canvas-holder" aria-hidden="true"></div>
+      <div class="layer-content">
+        <span class="layer-tag tag-4d">Capa 4 · El espacio de las fuerzas</span>
+        <h2>4D — El espacio que da las fuerzas</h2>
+        <p>
+          Una hiperesfera de cuatro dimensiones espaciales, acoplada a nuestro 3D.
+          Su comunicación proyectada produce el electromagnetismo, la gravedad y
+          la variación de las constantes.
+        </p>
+        <ul>
+          <li><strong>Electromagnetismo:</strong> la luz es la proyección de la curvatura 4D en el 3D.</li>
+          <li><strong>Gravedad:</strong> la expansión del universo es el flujo de información del 4D al 3D.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 5: COMUNICACIÓN ========== -->
+    <section class="scene comm" id="dim5">
+      <div class="comm-header">
+        <span class="layer-tag">El sistema completo</span>
+        <h2>Cómo se comunican las capas</h2>
+        <p class="comm-intro">
+          La comunicación es <strong>bidireccional</strong> — no va en un solo
+          sentido. Un cambio en cualquier capa afecta a todas las demás, como
+          vasos comunicantes.
+        </p>
+      </div>
+      <div id="comm-diagram" class="comm-diagram" aria-label="Diagrama de flujos entre dimensiones"></div>
+    </section>
+
+    <!-- ========== SECCIÓN 6: EVIDENCIA ========== -->
+    <section class="scene evidence" id="dim6">
+      <div class="comm-header">
+        <span class="layer-tag">No es solo teoría</span>
+        <h2>La evidencia real (2025–2026)</h2>
+        <p class="comm-intro">
+          Descubrimientos recientes parecen encajar con el modelo. Interactúa con
+          los datos.
+        </p>
+      </div>
+      <div id="chart-wa" class="chart-card">
+        <h3>Energía oscura dinámica — w(z)</h3>
+        <div id="svg-wa" class="chart-svg"></div>
+        <p class="chart-caption">DESI DR2 sugiere w > −1 a z ≲ 0.2 y w < −1 a z ≈ 0.75. La energía oscura no es una constante (Λ): es dinámica.</p>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 7: CONCIENCIA ========== -->
+    <section class="scene mind" id="dim7">
+      <div id="canvas-mind" class="canvas-holder" aria-hidden="true"></div>
+      <div class="layer-content">
+        <span class="layer-tag">La intersección</span>
+        <h2>Conciencia y dimensiones</h2>
+        <p>
+          Los sentidos son detectores de vibración: vista, oído, tacto, calor,
+          gusto — todo es vibración de una capa u otra. Tu cuerpo recibe señales
+          de todas las capas.
+        </p>
+        <p>
+          La diferencia entre una piedra y un cerebro es que el cerebro
+          <strong>integra</strong> la información en un todo irreductible.
+          La conciencia no está aislada en 3D: es el punto de convergencia donde
+          las cuatro capas integran información.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 8: PREDICCIONES ========== -->
+    <section class="scene predict" id="dim8">
+      <div class="comm-header">
+        <span class="layer-tag">Se puede comprobar</span>
+        <h2>Predicciones comprobables</h2>
+        <p class="comm-intro">
+          El modelo no es solo filosofía: hace predicciones observables.
+        </p>
+      </div>
+      <div id="timeline" class="timeline">
+        <div class="tl-item trend-now">
+          <div class="tl-orb now"></div>
+          <h3>Hoy</h3>
+          <p>Polarización del CMB ~10⁻³ rad y atenuación de luz por domain walls.</p>
+        </div>
+        <div class="tl-item trend-soon">
+          <div class="tl-orb soon"></div>
+          <h3>Pronto</h3>
+          <p>w(z) desviándose de −1 · nulos de LZ/XENONnT · sSFR constante de JWST.</p>
+        </div>
+        <div class="tl-item trend-later">
+          <div class="tl-orb later"></div>
+          <h3>A largo plazo</h3>
+          <p>LiteBIRD (2032), FCC (fotones masivos), variación de α con precisión 10⁻⁷.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SECCIÓN 9: CIERRE ========== -->
+    <section class="scene outro" id="dim9">
+      <div class="outro-content">
+        <h2>10 dimensiones en 4 capas.<br/>Un solo universo.</h2>
+        <p>
+          1D vibra y crea el 2D. El 2D proyecta materia y energía oscura. El 3D
+          sostiene la materia estable y la conciencia. El 4D entrega las fuerzas.
+          Todo está conectado.
+        </p>
+        <p class="outro-sign">1 + 2 + 3 + 4 = 10 · SO(10)</p>
+        <a class="outro-btn" href="#intro">Volver al inicio ↑</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripts propios -->
+  <script src="js/scroll.js" defer></script>
+  <script src="js/layers3d.js" defer></script>
+  <script src="js/communication.js" defer></script>
+  <script src="js/data.js" defer></script>
+  <script src="js/consciousness.js" defer></script>
+  <script src="js/main.js" defer></script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "curvatura": {
+    "valor_central": 0.045,
+    "rango": [0.045, 0.102],
+    "sigma": 2.76,
+    "descripcion": "Preferencia por curvatura positiva (Ω_k > 0). El 3D sería la superficie de una hiperesfera 4D finita.",
+    "fuente": "Reanálisis DESI DR1/DR2 (Chudaykin et al., PRD 113, 2026); test modelo-independiente FLRW (arXiv:2601.20293)"
+  },
+  "energia_oscura": {
+    "z_baja": 0.2,
+    "w_z_baja": -0.9,
+    "z_alta": 0.75,
+    "w_z_alta": -1.1,
+    "descripcion": "Energía oscura dinámica (w ≠ −1): w > −1 a z ≲ 0.2, w < −1 a z ≈ 0.75.",
+    "fuente": "DESI DR2, Nature Astronomy oct 2025; EPJC may 2026",
+    "tension": "DESI DR2 Lyα full-shape (jul 2026) desplaza el valor central hacia ΛCDM"
+  },
+  "gw250114": {
+    "snr": 15.8,
+    "descripcion": "Primera direct wave post-fusión con propiedades del horizonte: oscila a ~2ΩH, decae según κ, Kerr consistente. Valida horizonte = frontera 2D física.",
+    "fuente": "Nature, 24 jun 2026"
+  },
+  "predicciones_timeline": {
+    "hoy": "Polarización CMB ~10⁻³ rad; atenuación de luz por domain walls; oscilaciones de horizonte en GW.",
+    "pronto": "w(z) desviándose de −1; nulos de LZ/XENONnT (DM geométrica); sSFR constante de JWST.",
+    "largo_plazo": "LiteBIRD (2032) distingue polarización por walls vs inflación; FCC (fotones masivos); variación de α con precisión 10⁻⁷."
+  }
+}
