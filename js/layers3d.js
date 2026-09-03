@@ -37,13 +37,13 @@
     intro: { show: [1, 2, 3, 4], zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
     1:     { show: [1],          zoom: 5.5, membraneScale: 0, wrap3D: 0, stringShow: 1 },
     2:     { show: [1, 2],        zoom: 10,  membraneScale: 1, wrap3D: 0, stringShow: 0.9 },
-    3:     { show: [1, 2, 3],     zoom: 16,  membraneScale: 1, wrap3D: 1, stringShow: 0.75 },
-    4:     { show: [1, 2, 3, 4],  zoom: 25,  membraneScale: 1, wrap3D: 1, stringShow: 0.65 },
-    5:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
-    6:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
-    7:     { show: [1, 2, 3, 4],  zoom: 24,  membraneScale: 1, wrap3D: 1, stringShow: 0.6 },
-    8:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 },
-    9:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.7 }
+    3:     { show: [1, 2, 3],     zoom: 16,  membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
+    4:     { show: [1, 2, 3, 4],  zoom: 25,  membraneScale: 1, wrap3D: 1, stringShow: 0.75 },
+    5:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
+    6:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
+    7:     { show: [1, 2, 3, 4],  zoom: 24,  membraneScale: 1, wrap3D: 1, stringShow: 0.75 },
+    8:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
+    9:     { show: [1, 2, 3, 4],  zoom: 34,  membraneScale: 1, wrap3D: 1, stringShow: 0.8 }
   };
 
   // ---------- Renderer + escena ----------
@@ -137,7 +137,10 @@
 
   function updateString(t, vis, wrap3D, stringShow) {
     const d = dims[1];
-    const amp = 0.8 * stringShow;
+    // La amplitud crece cuando hay volumen alrededor (wrap3D): la cuerda
+    // es el "esqueleto" que llena el interior del contorno superior.
+    const exp = 1 + (wrap3D || 0) * 0.5;
+    const amp = 0.8 * stringShow * exp;
     for (let i = 0; i < STRING_SEG; i++) {
       const u = (i / (STRING_SEG - 1) - 0.5) * STRING_LEN;
       // varios modos armónicos superpuestos
@@ -251,13 +254,14 @@
     }
     mPtsGeo.attributes.position.needsUpdate = true;
 
-    membraneMat.opacity = 0.55 * o;
-    mPtsMat.opacity = 0.7 * o;
-
     // A medida que la membrana se cierra (wrap3D→1) sobre un volumen,
-    // el plano se repliega/y se atenúa: pasa a ser la esfera envolvente.
-    membrane.visible = wrap3D < 0.5;
-    mPts.visible = wrap3D < 0.5;
+    // el plano se repliega/atenúa y la esfera envolvente (holoshell/holowire)
+    // toma el relevo como la domain-wall cerrada. Transición suave.
+    const planarFade = Math.max(0, 1 - wrap3D * 1.4);
+    membraneMat.opacity = (0.55 * planarFade) * o;
+    mPtsMat.opacity = (0.7 * planarFade) * o;
+    membrane.visible = planarFade > 0.02;
+    mPts.visible = planarFade > 0.02;
 
     // Separación de domain walls determina masas → leve rotación
     membraneGroup.rotation.y = t * 0.08;
@@ -304,14 +308,22 @@
   });
 
   // Frontera "holográfica": la info del 3D vive en el 2D que lo envuelve.
-  // Representamos la envolvente como una esfera traslúcida de rejilla.
+  // Esta esfera ES la domain wall cerrada (contorno 2D convertido en superficie).
+  // Usa color azul (2D) para que se lea como la misma membrana que se replegó.
   const holoshell = new THREE.Mesh(
     new THREE.SphereGeometry(3.2, 40, 40),
-    new THREE.MeshBasicMaterial({ color: COL[3], wireframe: true, transparent: true, opacity: 0.14 })
+    new THREE.MeshBasicMaterial({ color: 0x9CA3D6, wireframe: false, transparent: true, opacity: 0.10 })
   );
   volumeGroup.add(holoshell);
 
-  dims[3] = { core, electrons, orbitRings, holoshell };
+  // Rejilla de la domain wall cerrada (azul, contorno 2D)
+  const holowire = new THREE.Mesh(
+    new THREE.SphereGeometry(3.2, 40, 40),
+    new THREE.MeshBasicMaterial({ color: COL[2], wireframe: true, transparent: true, opacity: 0.35 })
+  );
+  volumeGroup.add(holowire);
+
+  dims[3] = { core, electrons, orbitRings, holoshell, holowire };
 
   function updateVolume(t, vis, wrap3D) {
     const d = dims[3];
@@ -328,8 +340,14 @@
     // crece y se ilumina a medida que la membrana envuelve.
     const shellScale = 0.2 + 0.8 * ws;
     holoshell.scale.setScalar(shellScale);
-    holoshell.material.opacity = (0.18 + 0.3 * ws) * o;
+    holowire.scale.setScalar(shellScale);
+    holoshell.material.opacity = (0.08 + 0.15 * ws) * o;
+    holowire.material.opacity = (0.1 + 0.3 * ws) * o;
     holoshell.visible = ws > 0.02;
+    holowire.visible = ws > 0.02;
+
+    holowire.rotation.x = t * 0.1;
+    holowire.rotation.y = t * 0.14;
 
     // electrones orbitando
     d.electrons.forEach((el, i) => {
