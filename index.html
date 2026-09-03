@@ -67,7 +67,6 @@
 
     <!-- ========== SECCIÓN 1: 1D ========== -->
     <section class="scene layer layer-1d" id="dim1">
-      <div id="canvas-1d" class="canvas-holder" aria-hidden="true"></div>
       <div class="layer-content">
         <span class="layer-tag tag-1d">Capa 1 · La vibración</span>
         <h2>1D — La vibración original</h2>
@@ -82,7 +81,6 @@
 
     <!-- ========== SECCIÓN 2: 2D ========== -->
     <section class="scene layer layer-2d" id="dim2">
-      <div id="canvas-2d" class="canvas-holder" aria-hidden="true"></div>
       <div class="layer-content">
         <span class="layer-tag tag-2d">Capa 2 · La superficie</span>
         <h2>2D — La superficie que da masa</h2>
@@ -100,7 +98,6 @@
 
     <!-- ========== SECCIÓN 3: 3D ========== -->
     <section class="scene layer layer-3d" id="dim3">
-      <div id="canvas-3d" class="canvas-holder" aria-hidden="true"></div>
       <div class="layer-content">
         <span class="layer-tag tag-3d">Capa 3 · Nuestro universo</span>
         <h2>3D — El volumen que habitamos</h2>
@@ -119,7 +116,6 @@
 
     <!-- ========== SECCIÓN 4: 4D ========== -->
     <section class="scene layer layer-4d" id="dim4">
-      <div id="canvas-4d" class="canvas-holder" aria-hidden="true"></div>
       <div class="layer-content">
         <span class="layer-tag tag-4d">Capa 4 · El espacio de las fuerzas</span>
         <h2>4D — El espacio que da las fuerzas</h2>
@@ -159,10 +155,22 @@
           los datos.
         </p>
       </div>
-      <div id="chart-wa" class="chart-card">
-        <h3>Energía oscura dinámica — w(z)</h3>
-        <div id="svg-wa" class="chart-svg"></div>
-        <p class="chart-caption">DESI DR2 sugiere w > −1 a z ≲ 0.2 y w < −1 a z ≈ 0.75. La energía oscura no es una constante (Λ): es dinámica.</p>
+      <div class="chart-grid">
+        <div class="chart-card" id="card-wa">
+          <h3>Energía oscura dinámica — w(z)</h3>
+          <div id="svg-wa" class="chart-svg"></div>
+          <p class="chart-caption"><strong>DESI DR2:</strong> w > −1 a z ≲ 0.2 y w < −1 a z ≈ 0.75. La energía oscura no es constante (Λ): es dinámica.</p>
+        </div>
+        <div class="chart-card" id="card-ok">
+          <h3>Curvatura cósmica — Ω<sub>k</sub></h3>
+          <div id="svg-ok" class="chart-svg"></div>
+          <p class="chart-caption"><strong>DESI DR1/DR2 reanálisis:</strong> preferencia por curvatura positiva Ω<sub>k</sub> ≈ +0.045 a +0.102 (~2.76σ). El 3D sería superficie de una hiperesfera 4D finita.</p>
+        </div>
+      </div>
+      <div class="chart-card" id="card-gw">
+        <h3>El horizonte como superficie física — GW250114</h3>
+        <div id="svg-gw" class="chart-svg chart-gw"></div>
+        <p class="chart-caption">Primera "onda directa" post-fusión con propiedades del horizonte: oscila a ~2Ω<sub>H</sub> y decae según κ (Kerr consistente, SNR 15.8). Valida la idea de que el horizonte es una frontera 2D medible.</p>
       </div>
     </section>
 

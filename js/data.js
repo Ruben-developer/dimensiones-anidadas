@@ -182,16 +182,201 @@
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      const holder = document.getElementById('svg-wa');
-      if (holder) holder.innerHTML = '';
+      ['svg-wa', 'svg-ok', 'svg-gw'].forEach((id) => {
+        const holder = document.getElementById(id);
+        if (holder) holder.innerHTML = '';
+      });
       buildChart();
+      buildChartOk();
+      buildChartGw();
     }, 200);
   });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildChart);
+    document.addEventListener('DOMContentLoaded', () => {
+      buildChart();
+      buildChartOk();
+      buildChartGw();
+    });
   } else {
     buildChart();
+    buildChartOk();
+    buildChartGw();
+  }
+
+  // ============================================================
+  // Gráfica Ω_k — curvatura cósmica
+  // ============================================================
+  function buildChartOk() {
+    const holder = document.getElementById('svg-ok');
+    if (!holder) return;
+    const width = holder.clientWidth || 480;
+    const height = 320;
+    const margin = { top: 24, right: 28, bottom: 30, left: 30 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    holder.appendChild(svg);
+
+    // Rango del eje: -0.1 a 0.2 (plano en 0, curva positiva hacia arriba)
+    const xMin = -0.1, xMax = 0.2;
+    const yC = margin.top + innerH / 2;
+    const x = (v) => margin.left + ((v - xMin) / (xMax - xMin)) * innerW;
+
+    // Cero (plano, ΛCDM flat)
+    const zeroX = x(0);
+    const zeroL = document.createElementNS(NS, 'line');
+    zeroL.setAttribute('x1', zeroX); zeroL.setAttribute('y1', margin.top);
+    zeroL.setAttribute('x2', zeroX); zeroL.setAttribute('y2', margin.top + innerH);
+    zeroL.setAttribute('stroke', 'rgba(255,255,255,0.3)');
+    zeroL.setAttribute('stroke-dasharray', '5 4');
+    svg.appendChild(zeroL);
+
+    const lbl0 = document.createElementNS(NS, 'text');
+    lbl0.setAttribute('x', zeroX); lbl0.setAttribute('y', margin.top + innerH + 16);
+    lbl0.setAttribute('text-anchor', 'middle');
+    lbl0.setAttribute('fill', 'rgba(255,255,255,0.55)');
+    lbl0.setAttribute('font-size', '11');
+    lbl0.textContent = 'plano Ωk = 0';
+    svg.appendChild(lbl0);
+
+    // Banda de rango observado [0.045, 0.102]
+    const rLo = x(0.045), rHi = x(0.102);
+    const band = document.createElementNS(NS, 'rect');
+    band.setAttribute('x', rLo);
+    band.setAttribute('y', margin.top);
+    band.setAttribute('width', rHi - rLo);
+    band.setAttribute('height', innerH);
+    band.setAttribute('fill', '#F59E0B');
+    band.setAttribute('fill-opacity', '0.18');
+    band.setAttribute('rx', '4');
+    svg.appendChild(band);
+
+    // Valor central
+    const cX = x(0.073);
+    const mark = document.createElementNS(NS, 'circle');
+    mark.setAttribute('cx', cX); mark.setAttribute('cy', yC);
+    mark.setAttribute('r', '7');
+    mark.setAttribute('fill', '#F59E0B');
+    mark.setAttribute('opacity', '0');
+    svg.appendChild(mark);
+    const hLine = document.createElementNS(NS, 'line');
+    hLine.setAttribute('x1', margin.left); hLine.setAttribute('y1', yC);
+    hLine.setAttribute('x2', margin.left + innerW); hLine.setAttribute('y2', yC);
+    hLine.setAttribute('stroke', '#F59E0B');
+    hLine.setAttribute('stroke-width', '2');
+    hLine.setAttribute('opacity', '0');
+    svg.appendChild(hLine);
+
+    const val = document.createElementNS(NS, 'text');
+    val.setAttribute('x', cX); val.setAttribute('y', margin.top + 16);
+    val.setAttribute('text-anchor', 'middle');
+    val.setAttribute('fill', '#F59E0B');
+    val.setAttribute('font-weight', '700');
+    val.setAttribute('font-size', '20');
+    val.setAttribute('opacity', '0');
+    val.textContent = 'Ωk ≈ +0.07';
+    svg.appendChild(val);
+
+    const sig = document.createElementNS(NS, 'text');
+    sig.setAttribute('x', cX); sig.setAttribute('y', margin.top + 38);
+    sig.setAttribute('text-anchor', 'middle');
+    sig.setAttribute('fill', 'rgba(255,255,255,0.6)');
+    sig.setAttribute('font-size', '12');
+    sig.setAttribute('opacity', '0');
+    sig.textContent = '~2.76σ vs ΛCDM plano';
+    svg.appendChild(sig);
+
+    // animación
+    if (window.gsap) {
+      window.gsap.to([mark, hLine, val, sig], { opacity: 1, duration: 1.2, stagger: 0.2, ease: 'power2.out' });
+    } else {
+      [mark, hLine, val, sig].forEach((el) => el.setAttribute('opacity', '1'));
+    }
+  }
+
+  // ============================================================
+  // Gráfica GW — oscilación del horizonte (GW250114)
+  // ============================================================
+  function buildChartGw() {
+    const holder = document.getElementById('svg-gw');
+    if (!holder) return;
+    const width = holder.clientWidth || 820;
+    const height = 240;
+    const margin = { top: 16, right: 16, bottom: 30, left: 26 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    holder.appendChild(svg);
+
+    // Señal: oscilación a ~2ΩH que decae según κ (exponencial)
+    const x = (v) => margin.left + (v / 1) * innerW;
+    const yMid = margin.top + innerH / 2;
+    const amp = innerH * 0.36;
+    const y = (v) => yMid - v * amp;
+
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+
+    function render(t) {
+      let d = '';
+      const samples = 240;
+      for (let i = 0; i <= samples; i++) {
+        const ti = i / samples;
+        const env = Math.exp(-ti * 2.2); // decaimiento κ
+        const osc = Math.sin(ti * 8 * Math.PI + t * 2) * env; // ~2ΩH
+        const px = x(ti);
+        const py = y(osc);
+        d += `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)} `;
+      }
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', '#3B82F6');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('opacity', '0.9');
+    }
+    render(0);
+
+    // Envolventes de decaimiento
+    [-1, 1].forEach((sgn) => {
+      const envP = document.createElementNS(NS, 'path');
+      let d = '';
+      for (let i = 0; i <= 60; i++) {
+        const ti = i / 60;
+        const px = x(ti);
+        const py = y(sgn * Math.exp(-ti * 2.2));
+        d += `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)} `;
+      }
+      envP.setAttribute('d', d);
+      envP.setAttribute('fill', 'none');
+      envP.setAttribute('stroke', 'rgba(59,130,246,0.3)');
+      envP.setAttribute('stroke-dasharray', '3 4');
+      svg.appendChild(envP);
+    });
+
+    // Eje
+    const axis = document.createElementNS(NS, 'line');
+    axis.setAttribute('x1', margin.left); axis.setAttribute('y1', yMid);
+    axis.setAttribute('x2', margin.left + innerW); axis.setAttribute('y2', yMid);
+    axis.setAttribute('stroke', 'rgba(255,255,255,0.15)');
+    svg.appendChild(axis);
+
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', margin.left + innerW); lbl.setAttribute('y', yMid + 18);
+    lbl.setAttribute('text-anchor', 'end');
+    lbl.setAttribute('fill', 'rgba(255,255,255,0.5)');
+    lbl.setAttribute('font-size', '11');
+    lbl.textContent = 'tiempo →  (oscilación ~2ΩH, decaimiento κ)';
+    svg.appendChild(lbl);
   }
 
 })(window, document);
+

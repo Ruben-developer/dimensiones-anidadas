@@ -13,6 +13,49 @@
   justify-content: center;
 }
 
+/* Gradiente de acento por capa */
+.layer-1d { background: radial-gradient(ellipse at 30% 50%, rgba(139,92,246,0.12), transparent 60%); }
+.layer-2d { background: radial-gradient(ellipse at 70% 40%, rgba(59,130,246,0.14), transparent 60%); }
+.layer-3d { background: radial-gradient(ellipse at 30% 60%, rgba(16,185,129,0.12), transparent 60%); }
+.layer-4d { background: radial-gradient(ellipse at 70% 50%, rgba(245,158,11,0.14), transparent 60%); }
+
+/* Sección conciencia: texto a la derecha sobre panel de vidrio,
+   el canvas de neuronas/ondas queda a la izquierda */
+.mind {
+  justify-content: flex-end;
+  padding: 0 48px;
+}
+
+.mind .layer-content {
+  max-width: 520px;
+  padding: 40px 36px;
+  background: rgba(10,10,26,0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+}
+
+/* En las capas dimensionales, el texto va a la izquierda sobre panel
+   de vidrio, dejando a la derecha la visualización 3D */
+.layer {
+  justify-content: flex-start;
+  padding: 0 48px;
+}
+
+.layer .layer-content {
+  padding: 40px 36px;
+  background: rgba(10,10,26,0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  max-width: 520px;
+}
+
+@media (max-width: 768px) {
+  .layer, .mind { justify-content: flex-start; padding: 0 20px; }
+  .layer .layer-content, .mind .layer-content { padding: 28px 22px; max-width: 100%; }
+}
+
 .comm-header {
   text-align: center;
   padding: 0 24px;
@@ -57,6 +100,18 @@
   z-index: 2;
 }
 
+/* Grid de dos columnas para gráficas */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  width: 100%;
+  max-width: 1020px;
+  z-index: 2;
+}
+
+.chart-grid .chart-card { margin-top: 24px; max-width: none; }
+
 .chart-card h3 {
   font-size: 1.25rem;
   margin-bottom: 16px;
@@ -68,6 +123,8 @@
   height: 320px;
   position: relative;
 }
+
+.chart-svg.chart-gw { height: 240px; }
 
 .chart-svg svg { width: 100%; height: 100%; }
 
@@ -136,6 +193,7 @@
 @media (max-width: 768px) {
   .chart-card { padding: 18px; }
   .chart-svg { height: 240px; }
+  .chart-grid { grid-template-columns: 1fr; }
   .tl-item { padding: 20px 18px 20px 52px; }
   .tl-orb { left: 14px; }
 }
