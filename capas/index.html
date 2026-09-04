@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capas Anidadas — 1D → 2D → 3D → 4D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --c1: #8B5CF6; --c2: #3B82F6; --c3: #10B981; --c4: #F59E0B;
+      --bg: #050510; --fg: #E5E7EB; --muted: #6B7280;
+      --font-d: 'Space Grotesk', sans-serif; --font-b: 'Inter', sans-serif;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--fg); font-family:var(--font-b); }
+    #app { height:100%; position:relative; }
+
+    /* Selector de capas */
+    .layer-picker {
+      position:fixed; top:20px; left:50%; transform:translateX(-50%);
+      display:flex; gap:8px; background:rgba(10,10,26,0.9);
+      border:1px solid rgba(255,255,255,0.1); border-radius:999px;
+      padding:6px; backdrop-filter:blur(10px); z-index:100;
+    }
+    .layer-btn {
+      width:44px; height:44px; border-radius:50%; border:1px solid transparent;
+      background:transparent; color:var(--muted); font-family:var(--font-d);
+      font-weight:600; font-size:13px; cursor:pointer;
+      transition:all 0.3s cubic-bezier(0.22,1,0.36,1);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .layer-btn:hover { color:var(--fg); border-color:rgba(255,255,255,0.3); transform:scale(1.05); }
+    .layer-btn.active { color:#050510; transform:scale(1.1); box-shadow:0 0 20px currentColor; }
+    .layer-btn[data-layer="1"].active { background:var(--c1); border-color:var(--c1); }
+    .layer-btn[data-layer="2"].active { background:var(--c2); border-color:var(--c2); }
+    .layer-btn[data-layer="3"].active { background:var(--c3); border-color:var(--c3); }
+    .layer-btn[data-layer="4"].active { background:var(--c4); border-color:var(--c4); }
+
+    /* Info panel */
+    .info-panel {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      background:rgba(10,10,26,0.95); border:1px solid rgba(255,255,255,0.1);
+      border-radius:16px; padding:20px 32px; max-width:520px; text-align:center;
+      backdrop-filter:blur(10px); z-index:100;
+      transition:opacity 0.4s, transform 0.4s;
+    }
+    .info-panel.hidden { opacity:0; pointer-events:none; transform:translateX(-50%) translateY(20px); }
+    .info-title { font-family:var(--font-d); font-size:1.4rem; font-weight:600; margin-bottom:8px; }
+    .info-desc { color:var(--muted); line-height:1.7; font-size:1rem; }
+
+    /* Expansión indicator */
+    .expansion-badge {
+      position:fixed; top:20px; right:24px;
+      background:rgba(10,10,26,0.9); border:1px solid rgba(255,255,255,0.1);
+      border-radius:12px; padding:10px 16px; font-family:var(--font-d);
+      font-size:0.85rem; color:var(--c4); backdrop-filter:blur(10px); z-index:100;
+      display:flex; align-items:center; gap:8px;
+    }
+    .expansion-pulse {
+      width:8px; height:8px; background:var(--c4); border-radius:50%;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+
+    @media (max-width:600px) {
+      .layer-btn { width:38px; height:38px; font-size:11px; }
+      .info-panel { margin:0 16px; left:0; right:0; transform:none; bottom:16px; padding:16px 20px; }
+      .info-panel.hidden { transform:translateY(20px); }
+      .expansion-badge { top:auto; bottom:140px; right:16px; left:16px; justify-content:center; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Selector de capas -->
+  <div class="layer-picker" role="radiogroup" aria-label="Seleccionar capa">
+    <button class="layer-btn" data-layer="1" role="radio" aria-checked="true" title="1D — Cuerda vibrante">1D</button>
+    <button class="layer-btn" data-layer="2" role="radio" aria-checked="false" title="2D — Membrana vibrante">2D</button>
+    <button class="layer-btn" data-layer="3" role="radio" aria-checked="false" title="3D — Nuestro mundo">3D</button>
+    <button class="layer-btn" data-layer="4" role="radio" aria-checked="false" title="4D — Hiperesfera">4D</button>
+  </div>
+
+  <!-- Badge de expansión -->
+  <div class="expansion-badge">
+    <span class="expansion-pulse" aria-hidden="true"></span>
+    <span>Universo en expansión continua</span>
+  </div>
+
+  <!-- Panel informativo -->
+  <div class="info-panel" id="infoPanel" role="region" aria-live="polite">
+    <div class="info-title" id="infoTitle">1D — La cuerda vibrante</div>
+    <div class="info-desc" id="infoDesc">
+      Una cuerda cerrada vibrando en modos armónicos. Cada vibración distinta es una partícula distinta (e⁻, quarks, neutrinos). No hay partículas puntuales sueltas: todo es la misma cuerda en distintos modos.
+    </div>
+  </div>
+
+  <!-- Librerías -->
+  <script src="../js/three.min.js"></script>
+
+  <script>
+/* ============================================================
+   Capas Anidadas — Visualización pura: cuerda → membrana → volumen → hiperesfera
+   Todo en expansión continua. Selector para enfocar cada capa.
+   ============================================================ */
+
+const C = { 1:0x8B5CF6, 2:0x3B82F6, 3:0x10B981, 4:0xF59E0B };
+const C_HEX = { 1:'#8B5CF6', 2:'#3B82F6', 3:'#10B981', 4:'#F59E0B' };
+
+// ---- Config por capa ----
+const LAYER_INFO = {
+  1: { title:'1D — La cuerda vibrante', color:C_HEX[1],
+    desc:'Una cuerda cerrada vibrando en modos armónicos. Cada vibración distinta es una partícula distinta (e⁻, quarks, neutrinos). No hay partículas puntuales sueltas: todo es la misma cuerda en distintos modos.' },
+  2: { title:'2D — La membrana vibrante', color:C_HEX[2],
+    desc:'La cuerda vibra y su trayectoria barre una superficie real: la domain wall. Sus fluctuaciones son Materia Oscura; al congelarse (dejar de oscilar) se convierte en Energía Oscura (w = −1).' },
+  3: { title:'3D — Nuestro mundo', color:C_HEX[3],
+    desc:'El volumen que habitamos. La membrana se cierra envolviendo un interior donde la materia forma órbitas estables (teorema de Ehrenfest). Aquí emerge la conciencia como recursividad: un bucle causal que se observa a sí mismo.' },
+  4: { title:'4D — La hiperesfera', color:C_HEX[4],
+    desc:'Un espacio de 4 dimensiones espaciales que envuelve nuestro 3D. Su proyección Kaluza-Klein genera el electromagnetismo; la tensión σ de su frontera es la Energía Oscura. R₀ ≈ 5.7 Gpc, σ ≈ 10⁻¹⁰ J/m².' }
+};
+
+// ---- Three.js setup ----
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 0, 26);
+camera.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+dl.position.set(8, 12, 15); scene.add(dl);
+
+// ---- Geometrías base ----
+const L = 5;              // longitud cuerda
+const SEG = 200;          // resolución curva
+const MEM_W = 40, MEM_H = 50; // membrana barrido
+const HS_R = 5.0;         // radio hiperesfera
+
+// ---- Objetos visuales ----
+
+// 1. CUERDA (puntos + línea)
+const sGeo = new THREE.BufferGeometry();
+const sPos = new Float32Array((SEG+1)*3);
+sGeo.setAttribute('position', new THREE.BufferAttribute(sPos,3));
+const sMat = new THREE.PointsMaterial({ color:C[1], size:0.06, transparent:true, opacity:1 });
+const sPts = new THREE.Points(sGeo, sMat); scene.add(sPts);
+
+const lGeo = new THREE.BufferGeometry();
+lGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((SEG+1)*3), 3));
+const lMat = new THREE.LineBasicMaterial({ color:C[1], transparent:true, opacity:0.9 });
+const sLine = new THREE.Line(lGeo, lMat); scene.add(sLine);
+
+// Partículas (modos = partículas)
+const nParts = 14;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(nParts*3);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
+const pMat = new THREE.PointsMaterial({ color:C[1], size:0.11, transparent:true, opacity:0.95 });
+const pMesh = new THREE.Points(pGeo, pMat); scene.add(pMesh);
+const partData = Array.from({length:nParts},(_,i)=>({baseX:(i-nParts/2)*0.45, phase:i*0.9}));
+
+// 2. MEMBRANA (barrido de la cuerda)
+const mGeo = new THREE.BufferGeometry();
+const mPos = new Float32Array(MEM_W*MEM_H*3);
+const mUV = new Float32Array(MEM_W*MEM_H*2);
+mGeo.setAttribute('position', new THREE.BufferAttribute(mPos,3));
+mGeo.setAttribute('uv', new THREE.BufferAttribute(mUV,2));
+const mMat = new THREE.MeshPhongMaterial({
+  color:C[2], side:THREE.DoubleSide, transparent:true, opacity:0,
+  emissive:C[2], emissiveIntensity:0.25, shininess:50
+});
+const mMesh = new THREE.Mesh(mGeo, mMat); scene.add(mMesh);
+
+// Fluctuaciones DM
+const nFl = 60*60;
+const fGeo = new THREE.BufferGeometry();
+const fPos = new Float32Array(nFl*3);
+fGeo.setAttribute('position', new THREE.BufferAttribute(fPos,3));
+const fMat = new THREE.PointsMaterial({ color:0xffffff, size:0.025, transparent:true, opacity:0 });
+const fMesh = new THREE.Points(fGeo, fMat); scene.add(fMesh);
+
+// 3. VOLUMEN 3D
+const vol = new THREE.Group(); scene.add(vol);
+const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.5,24,24),
+  new THREE.MeshPhongMaterial({ color:C[3], emissive:C[3], emissiveIntensity:0.6, shininess:100 }));
+nucleus.visible=false; vol.add(nucleus);
+
+const orbits = [
+  {r:1.3, speed:1.8, tilt:0.3}, {r:2.0, speed:1.2, tilt:1.1}, {r:2.8, speed:0.8, tilt:2.0}
+];
+const electrons = orbits.map(o=>{
+  const e=new THREE.Mesh(new THREE.SphereGeometry(0.1,14,14), new THREE.MeshBasicMaterial({color:C[3]}));
+  e.visible=false; vol.add(e); return {mesh:e, o};
+});
+const oRings = orbits.map(o=>{
+  const r=new THREE.Mesh(new THREE.TorusGeometry(o.r,0.018,8,80),
+    new THREE.MeshBasicMaterial({color:C[3],transparent:true,opacity:0}));
+  r.rotation.x=o.tilt; r.visible=false; vol.add(r); return r;
+});
+const recLoop = new THREE.Mesh(new THREE.TorusGeometry(1.6,0.04,16,120),
+  new THREE.MeshBasicMaterial({color:0xffd700,transparent:true,opacity:0}));
+recLoop.rotation.x=Math.PI/2; recLoop.visible=false; vol.add(recLoop);
+
+// Esfera envolvente (domain wall cerrada)
+const hshell = new THREE.Mesh(new THREE.SphereGeometry(3.3,40,40),
+  new THREE.MeshBasicMaterial({color:0x9CA3D6,transparent:true,opacity:0}));
+const hwire = new THREE.Mesh(new THREE.SphereGeometry(3.3,40,40),
+  new THREE.MeshBasicMaterial({color:C[2],wireframe:true,transparent:true,opacity:0}));
+hshell.visible=false; hwire.visible=false; vol.add(hshell); vol.add(hwire);
+
+// 4. HIPERESFERA 4D
+const hsGroup = new THREE.Group(); scene.add(hsGroup);
+const hsMesh = new THREE.Mesh(new THREE.SphereGeometry(HS_R,56,56),
+  new THREE.MeshPhongMaterial({color:C[4],wireframe:true,transparent:true,opacity:0,emissive:C[4],emissiveIntensity:0.15}));
+hsGroup.add(hsMesh);
+
+// Rayos KK
+const nRay=140; const rayGeo=new THREE.BufferGeometry();
+const rPos=new Float32Array(nRay*3); rayGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
+const rayData=Array.from({length:nRay},()=>({th:Math.random()*Math.PI*2,ph:Math.acos(2*Math.random()-1),speed:0.35+Math.random()*0.5,off:Math.random()*40}));
+rayGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
+const rMat=new THREE.PointsMaterial({color:C[4],size:0.06,transparent:true,opacity:0});
+const rMesh=new THREE.Points(rayGeo,rMat); hsGroup.add(rMesh);
+
+// EM proyectado
+const nEM=90; const emGeo=new THREE.BufferGeometry();
+const ePos=new Float32Array(nEM*3); emGeo.setAttribute('position',new THREE.BufferAttribute(ePos,3));
+const emData=Array.from({length:nEM},()=>({th:Math.random()*Math.PI*2,ph:Math.acos(2*Math.random()-1),r:2.8+Math.random()*1.6,speed:0.8+Math.random()*1.2}));
+emGeo.setAttribute('position',new THREE.BufferAttribute(ePos,3));
+const eMat=new THREE.PointsMaterial({color:0xffeb3b,size:0.05,transparent:true,opacity:0});
+const eMesh=new THREE.Points(emGeo,eMat); hsGroup.add(eMesh);
+
+// Estrellas
+const sG=new THREE.BufferGeometry(); const sP=new Float32Array(900*3);
+for(let i=0;i<900;i++){const r=12+Math.random()*50,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);sP[i*3]=r*Math.sin(ph)*Math.cos(th);sP[i*3+1]=r*Math.sin(ph)*Math.sin(th);sP[i*3+2]=r*Math.cos(ph);}
+sG.setAttribute('position',new THREE.BufferAttribute(sP,3));
+scene.add(new THREE.Points(sG,new THREE.PointsMaterial({color:0xffffff,size:0.06,transparent:true,opacity:0.4})));
+
+// ---- Estado global ----
+const state = {
+  targetT: 0,       // 0..1 global
+  t: 0,             // suavizado
+  targetZoom: 26,
+  zoom: 26,
+  activeLayer: 1,   // 1..4 qué capa enfocar
+  mouseX: 0, mouseY: 0
+};
+
+const ZOOM = { 1:7, 2:11, 3:16, 4:24 };
+
+// ---- Mapeo capa → rango t ----
+// Cada capa ocupa un rango; al enfocar una capa, t va a su centro
+const LAYER_T_CENTER = { 1:0.125, 2:0.375, 3:0.625, 4:0.875 };
+
+// ---- Selector UI ----
+const btns = document.querySelectorAll('.layer-btn');
+const infoPanel = document.getElementById('infoPanel');
+const infoTitle = document.getElementById('infoTitle');
+const infoDesc = document.getElementById('infoDesc');
+
+btns.forEach(b=>{
+  b.addEventListener('click',()=>{
+    const L = parseInt(b.dataset.layer);
+    if (state.activeLayer === L) return;
+    state.activeLayer = L;
+    state.targetT = LAYER_T_CENTER[L];
+    state.targetZoom = ZOOM[L];
+    btns.forEach(x=>{x.classList.remove('active');x.setAttribute('aria-checked','false')});
+    b.classList.add('active'); b.setAttribute('aria-checked','true');
+    const info = LAYER_INFO[L];
+    infoTitle.textContent = info.title; infoTitle.style.color = info.color;
+    infoDesc.textContent = info.desc;
+    infoPanel.classList.remove('hidden');
+  });
+});
+
+// Inicial: enfocar 1D
+state.targetT = LAYER_T_CENTER[1];
+state.targetZoom = ZOOM[1];
+
+window.addEventListener('resize',()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+window.addEventListener('mousemove',e=>{
+  state.mouseX = (e.clientX/window.innerWidth-0.5)*2;
+  state.mouseY = (e.clientY/window.innerHeight-0.5)*2;
+});
+
+// ---- Funciones de geometría ----
+function curvePoints(t, amp){
+  const out=[];
+  for(let i=0;i<=SEG;i++){
+    const u=i/SEG;
+    const x=(u-0.5)*L;
+    const ph = x*2.5 + t*3;
+    out.push(new THREE.Vector3(x, Math.sin(ph)*amp, Math.cos(ph*1.7)*amp*0.6));
+  }
+  return out;
+}
+function ease(a,b,k,dt){return a+(b-a)*(1-Math.exp(-k*dt));}
+
+// ---- Update principal (t global 0..1) ----
+function updateAll(t){
+  const p1 = THREE.MathUtils.clamp(t/0.25, 0, 1);
+  const p2 = THREE.MathUtils.clamp((t-0.25)/0.25, 0, 1);
+  const p3 = THREE.MathUtils.clamp((t-0.5)/0.25, 0, 1);
+  const p4 = THREE.MathUtils.clamp((t-0.75)/0.25, 0, 1);
+
+  // 1. CUERDA
+  const curveAmp = 0.55 * (1 + p3*0.3);
+  const pts = curvePoints(t*4, curveAmp);
+  for(let i=0;i<=SEG;i++){
+    const v=pts[i];
+    sPos[i*3]=v.x; sPos[i*3+1]=v.y; sPos[i*3+2]=v.z;
+    lGeo.attributes.position.array[i*3]=v.x;
+    lGeo.attributes.position.array[i*3+1]=v.y;
+    lGeo.attributes.position.array[i*3+2]=v.z;
+  }
+  sGeo.attributes.position.needsUpdate=true;
+  lGeo.attributes.position.needsUpdate=true;
+  sPts.material.opacity = p1>0?1:0;
+  sLine.material.opacity = p1>0?0.9:0;
+  sPts.visible=lGeo.visible=p1>0.01;
+
+  // partículas (modos)
+  for(let i=0;i<nParts;i++){
+    const d=partData[i];
+    const y=Math.sin(t*5+d.phase)*0.3;
+    pPos[i*3]=d.baseX; pPos[i*3+1]=y; pPos[i*3+2]=0;
+  }
+  pGeo.attributes.position.needsUpdate=true;
+  pMesh.material.opacity=p1; pMesh.visible=p1>0.01;
+
+  // 2. MEMBRANA (barrido de la curva)
+  if(p2>0.01){
+    mMesh.visible=true; mMesh.material.opacity=0.55*p2;
+    fMesh.visible=true; fMesh.material.opacity=0.7*p2*(1-THREE.MathUtils.clamp((t-0.5)/0.25,0,1));
+    // Generar membrana como barrido de la curva
+    for(let j=0;j<MEM_H;j++){
+      const u=j/(MEM_H-1);
+      const cx=(u-0.5)*L;
+      const cy=Math.sin(cx*2.5+t*4)*0.55;
+      const cz=Math.cos(cx*2.5*1.7+t*4)*0.55*0.6;
+      for(let i=0;i<MEM_W;i++){
+        const v=i/MEM_W;
+        const ang=v*Math.PI*2;
+        const R=1.8*p2;
+        // Tangente aprox
+        const du=0.01, u2=Math.min(u+du,1);
+        const cx2=(u2-0.5)*L;
+        const cy2=Math.sin(cx2*2.5+t*4)*0.55;
+        const cz2=Math.cos(cx2*2.5*1.7+t*4)*0.55*0.6;
+        const tx=cx2-cx, ty=cy2-cy, tz=cz2-cz;
+        const tl=Math.hypot(tx,ty,tz)||1;
+        const nx=tx/tl, ny=ty/tl, nz=tz/tl;
+        const px=-nz, pz=nx, py=0;
+        const pl=Math.hypot(px,py,pz)||1;
+        const bx=py*nz-pz*ny, by=pz*nx-px*nz, bz=px*ny-py*nx;
+        const rx=cx+R*(Math.cos(ang)*bx+Math.sin(ang)*px/pl);
+        const ry=cy+R*(Math.cos(ang)*by+Math.sin(ang)*py/pl);
+        const rz=cz+R*(Math.cos(ang)*bz+Math.sin(ang)*pz/pl);
+        const idx=(j*MEM_W+i)*3;
+        mPos[idx]=rx; mPos[idx+1]=ry; mPos[idx+2]=rz;
+        mUV[idx]=v; mUV[idx+1]=u;
+      }
+    }
+    mGeo.attributes.position.needsUpdate=true;
+    mGeo.computeVertexNormals();
+  }else{mMesh.visible=false;}
+
+  // Fluctuaciones DM (se congelan en fase 3)
+  const freeze=THREE.MathUtils.clamp((t-0.5)/0.25,0,1);
+  if(p2>0.01){
+    const amp=0.4*(1-freeze*0.7);
+    for(let i=0;i<nFl;i++){
+      const u=Math.random(), v=Math.random();
+      const cx=(u-0.5)*4, cy=(v-0.5)*4;
+      const cz=Math.sin(cx*1.3+t*(1.4-freeze))*Math.cos(cy*1.3+t*(1.1-freeze))*amp;
+      fPos[i*3]=cx; fPos[i*3+1]=cy; fPos[i*3+2]=cz;
+    }
+    fGeo.attributes.position.needsUpdate=true;
+  }
+
+  // 3. VOLUMEN
+  const volOn=p3>0.02;
+  vol.children.forEach(c=>c.visible=volOn);
+  if(volOn){
+    const ws=p3;
+    nucleus.visible=true;
+    electrons.forEach(e=>e.mesh.visible=true);
+    oRings.forEach(r=>{r.visible=true;r.material.opacity=0.35*ws;});
+    recLoop.visible=true; recLoop.material.opacity=0.4*ws;
+    recLoop.rotation.y=t*0.8; recLoop.scale.setScalar(1+0.15*Math.sin(t*3)*ws);
+    electrons.forEach((el,i)=>{
+      const a=t*el.o.speed+i;
+      const x=el.o.r*Math.cos(a), z=el.o.r*Math.sin(a);
+      el.mesh.position.set(x,0,z);
+      el.mesh.position.applyAxisAngle(new THREE.Vector3(1,0,0),el.o.tilt);
+    });
+    const s=0.2+0.8*ws;
+    hshell.visible=hwire.visible=true;
+    hshell.scale.setScalar(s); hwire.scale.setScalar(s);
+    hshell.material.opacity=0.08+0.12*ws;
+    hwire.material.opacity=0.15+0.25*ws;
+    hwire.rotation.y=t*0.08;
+  }
+
+  // 4. HIPERESFERA
+  const hsOn=p4>0.02;
+  hsGroup.children.forEach(c=>c.visible=hsOn);
+  if(hsOn){
+    hsMesh.visible=true; hsMesh.material.opacity=0.3*p4;
+    hsMesh.rotation.x=t*0.06; hsMesh.rotation.y=t*0.1;
+    rMesh.visible=true; rMesh.material.opacity=0.85*p4;
+    const rp=rMesh.geometry.attributes.position.array;
+    const up=new THREE.Vector3();
+    for(let i=0;i<nRay;i++){
+      const rd=rayData[i];
+      const frac=(t*rd.speed+rd.off)%1;
+      const rad=HS_R*Math.pow(1-frac,1.3);
+      up.set(Math.sin(rd.ph)*Math.cos(rd.th), Math.sin(rd.ph)*Math.sin(rd.th), Math.cos(rd.ph));
+      rp[i*3]=up.x*rad; rp[i*3+1]=up.y*rad; rp[i*3+2]=up.z*rad;
+    }
+    rMesh.geometry.attributes.position.needsUpdate=true;
+    rMesh.material.opacity=0.85*p4;
+    eMesh.visible=true; eMesh.material.opacity=0.7*p4;
+    const ep=eMesh.geometry.attributes.position.array;
+    emData.forEach((d,i)=>{
+      const r=d.r*(0.9+0.1*Math.sin(t*d.speed));
+      ep[i*3]=r*Math.sin(d.ph)*Math.cos(d.th+t*d.speed*0.5);
+      ep[i*3+1]=r*Math.sin(d.ph)*Math.sin(d.th+t*d.speed*0.5);
+      ep[i*3+2]=r*Math.cos(d.ph);
+    });
+    eMesh.geometry.attributes.position.needsUpdate=true;
+  }
+}
+
+// ---- Loop ----
+let last=performance.now();
+function animate(now){
+  const dt=Math.min((now-last)/1000,0.1); last=now;
+  state.t = state.t + (state.targetT-state.t)*Math.min(dt*2.5,1);
+  state.zoom = state.zoom + (state.targetZoom-state.zoom)*Math.min(dt*2.2,1);
+  camera.position.z = state.zoom;
+  camera.position.x += (state.mouseX*1.2 - camera.position.x)*Math.min(dt*2,1);
+  camera.position.y += (-state.mouseY*0.8 - camera.position.y)*Math.min(dt*2,1);
+  camera.lookAt(0,0,0);
+  updateAll(state.t);
+  renderer.render(scene,camera);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script>
+  </script>
+</body>
+</html>
