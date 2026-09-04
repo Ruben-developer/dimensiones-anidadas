@@ -1,12 +1,12 @@
 /* ============================================================
    Dimensiones Anidadas — layers3d.js
-   VISUALIZACIÓN DIDÁCTICA DE LA ONTOLOGÍA 1+2+3+4
+   EVOLUCIÓN VISUAL CONTINUA: cuerda → membrana → volumen → hiperesfera
 
-   Cada sección enseña el MECANISMO FÍSICO real del modelo:
-   - 1D: cuerda vibrando → modos = partículas (e⁻, q, ν)
-   - 2D: domain walls → fluctuaciones = DM, congeladas = DE
-   - 3D: órbitas estables (Ehrenfest) + recursividad = conciencia
-   - 4D: proyección KK 5D→4D (EM) + σ frontera = DE
+   Un solo parámetro t ∈ [0,1] controla toda la morfosis:
+   t ∈ [0, 0.25]   → 1D: cuerda vibrando
+   t ∈ [0.25,0.5]  → 2D: la cuerda barre y SU trayectoria SE CONVIERTE en la membrana
+   t ∈ [0.5, 0.75] → 3D: la membrana se ENVUELVE cerrándose en esfera conteniendo el volumen
+   t ∈ [0.75, 1]   → 4D: el volumen queda dentro de la hiperesfera con proyección KK
    ============================================================ */
 
 (function (window, document) {
@@ -16,552 +16,475 @@
 
   const THREE = window.THREE;
 
-  // Colores por capa (ontología)
-  const COL = {
-    1: 0x8B5CF6,  // violeta: vibración original
-    2: 0x3B82F6,  // azul: domain wall / superficie
-    3: 0x10B981,  // verde: volumen 3D / materia estable
-    4: 0xF59E0B   // dorado: hiperespacio / fuerzas
-  };
-  const COL_HEX = { 1: '#8B5CF6', 2: '#3B82F6', 3: '#10B981', 4: '#F59E0B' };
-
-  // Parámetros ontológicos (de tu vault)
-  const R0 = 5.7;        // Gpc - radio hiperesfera 4D
-  const SIGMA = 1e-10;   // J/m² - tensión frontera = DE
+  // Colores ontológicos
+  const C1 = 0x8B5CF6, C2 = 0x3B82F6, C3 = 0x10B981, C4 = 0xF59E0B;
 
   // ---------- Renderer ----------
   const holder = document.createElement('div');
-  holder.style.position = 'fixed';
-  holder.style.inset = '0';
-  holder.style.zIndex = '0';
-  holder.style.pointerEvents = 'none';
+  holder.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none';
   holder.id = 'bg-3d';
   document.body.prepend(holder);
 
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  } catch (e) {
-    holder.remove();
-    return;
-  }
+  } catch (e) { holder.remove(); return; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   holder.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
-  camera.position.set(0, 0, 34);
+  camera.position.set(0, 0, 28);
   camera.lookAt(0, 0, 0);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambient);
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  dirLight.position.set(8, 12, 15);
-  scene.add(dirLight);
-  const ptLight = new THREE.PointLight(0xffffff, 0.6, 60);
-  ptLight.position.set(-6, -4, 10);
-  scene.add(ptLight);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9);
+  dl.position.set(8, 12, 15); scene.add(dl);
 
   function ease(a, b, k, dt) { return a + (b - a) * (1 - Math.exp(-k * dt)); }
 
   // ============================================================
-  // CAPA 1 — LA CUERDA VIBRANTE (1D)
-  // Cada modo vibratorio = una partícula del Modelo Estándar
+  // GEOMETRÍA BASE: una curva paramétrica que servirá de "hilo"
+  // para la cuerda, el barrido de la membrana, y el contorno final
   // ============================================================
-  const stringGroup = new THREE.Group();
-  scene.add(stringGroup);
+  const CURVE_SEG = 300;
+  const L = 4.5; // longitud de la cuerda
 
-  const SEG = 240;
-  const LEN = 5.5;
+  // Curva base: una línea en X que vibra en Y,Z
+  function getCurvePoints(t, amp) {
+    const pts = [];
+    for (let i = 0; i <= CURVE_SEG; i++) {
+      const u = i / CURVE_SEG; // 0..1
+      const x = (u - 0.5) * L;
+      const phase = x * 2.5 + t * 3;
+      const y = Math.sin(phase) * amp;
+      const z = Math.cos(phase * 1.7) * amp * 0.6;
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    return pts;
+  }
+
+  // ============================================================
+  // OBJETOS VISUALES (creados una vez, animados por t)
+  // ============================================================
+
+  // --- 1. La CUERDA (puntos + línea) ---
   const stringGeo = new THREE.BufferGeometry();
-  const sPos = new Float32Array(SEG * 3);
+  const sPos = new Float32Array((CURVE_SEG + 1) * 3);
   stringGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-  const stringMat = new THREE.PointsMaterial({ color: COL[1], size: 0.06, transparent: true, opacity: 0.95 });
-  const stringMesh = new THREE.Points(stringGeo, stringMat);
-  stringGroup.add(stringMesh);
+  const stringMat = new THREE.PointsMaterial({ color: C1, size: 0.05, transparent: true, opacity: 1 });
+  const stringPts = new THREE.Points(stringGeo, stringMat);
+  scene.add(stringPts);
 
   const lineGeo = new THREE.BufferGeometry();
-  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SEG * 3), 3));
-  const lineMat = new THREE.LineBasicMaterial({ color: COL[1], transparent: true, opacity: 0.8 });
-  const lineMesh = new THREE.Line(lineGeo, lineMat);
-  stringGroup.add(lineMesh);
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((CURVE_SEG + 1) * 3), 3));
+  const lineMat = new THREE.LineBasicMaterial({ color: C1, transparent: true, opacity: 0.9 });
+  const stringLine = new THREE.Line(lineGeo, lineMat);
+  scene.add(stringLine);
 
-  // NÚCLEO: esferas representando partículas generadas
-  const particleData = [
-    { name: 'e⁻', mass: 0.511, offset: 0 },
-    { name: 'u',  mass: 2.2,   offset: 2 },
-    { name: 'd',  mass: 4.7,   offset: 4 },
-    { name: 'ν',  mass: 0,     offset: 6 },
-  ];
-  const particles = particleData.map(p => {
-    const g = new THREE.Group();
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.25, 16, 16),
-      new THREE.MeshBasicMaterial({ color: COL[1], transparent: true, opacity: 0.9 })
-    );
-    sphere.position.set((p.offset - 3) * 0.8, 0, 0);
-    g.add(sphere);
-    // Etiqueta
-    const label = document.createElement('div');
-    label.style.cssText = 'position:absolute;color:#8B5CF6;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap;';
-    label.textContent = p.name;
-    label.dataset.type = 'string-label';
-    document.body.appendChild(label);
-    g.labelEl = label;
-    stringGroup.add(g);
-    return { g, sphere, label, phase: p.offset * 0.5, baseX: (p.offset - 3) * 0.8 };
+  // Partículas que "emanan" de la cuerda (modos = partículas)
+  const nParts = 16;
+  const partGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(nParts * 3);
+  partGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const partMat = new THREE.PointsMaterial({ color: C1, size: 0.12, transparent: true, opacity: 0.9 });
+  const partMesh = new THREE.Points(partGeo, partMat);
+  scene.add(partMesh);
+
+  // Etiquetas partículas HTML
+  const partLabels = ['e⁻','u','d','ν','μ','τ','s','c','b','t','W','Z','H','γ','g','νₘ'];
+  const partEls = partLabels.slice(0, nParts).map((txt, i) => {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;color:#8B5CF6;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap;z-index:10;text-shadow:0 0 4px #000';
+    el.textContent = txt;
+    document.body.appendChild(el);
+    return { el, baseX: (i - nParts/2) * 0.4, phase: i * 0.8 };
   });
-  stringGroup.particles = particles;
 
-  function updateString(t, vis, wrap3D, stringShow) {
-    const o = vis || 0;
-    if (o < 0.01) {
-      stringMesh.visible = false;
-      lineMesh.visible = false;
-      particles.forEach(p => { p.g.visible = false; if (p.labelEl) p.labelEl.style.opacity = '0'; });
-      return;
-    }
-    stringMesh.visible = true;
-    lineMesh.visible = true;
+  // --- 2. La MEMBRANA (barrido de la cuerda) ---
+  // Geometría: una "cinta" que se genera barrido de la curva
+  const MEM_W = 48;  // resolución angular (barrido)
+  const MEM_H = 60;  // resolución longitudinal (a lo largo de la cuerda)
+  const memGeo = new THREE.BufferGeometry();
+  const mPos = new Float32Array(MEM_W * MEM_H * 3);
+  const mNor = new Float32Array(MEM_W * MEM_H * 3);
+  const mUV  = new Float32Array(MEM_W * MEM_H * 2);
+  memGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+  memGeo.setAttribute('normal', new THREE.BufferAttribute(mNor, 3));
+  memGeo.setAttribute('uv', new THREE.BufferAttribute(mUV, 2));
 
-    // Modos vibracionales superpuestos (3 armónicos)
-    const exp = 1 + (wrap3D || 0) * 0.4;
-    const amp = 0.55 * stringShow * exp;
-    for (let i = 0; i < SEG; i++) {
-      const u = (i / (SEG - 1) - 0.5) * LEN;
-      const y = Math.sin(u * 1.4 + t * 2) * amp +
-                Math.sin(u * 3.8 - t * 1.6) * 0.25 * amp;
-      const z = Math.cos(u * 2.6 + t * 1.8) * 0.3 * amp;
-      sPos[i * 3] = u;
-      sPos[i * 3 + 1] = y;
-      sPos[i * 3 + 2] = z;
-      lineGeo.attributes.position.array[i * 3] = u;
-      lineGeo.attributes.position.array[i * 3 + 1] = y;
-      lineGeo.attributes.position.array[i * 3 + 2] = z;
-    }
-    stringGeo.attributes.position.needsUpdate = true;
-    lineGeo.attributes.position.needsUpdate = true;
-
-    // Partículas oscilando con la cuerda (modo local)
-    particles.forEach((p, i) => {
-      const localAmp = amp * 0.4;
-      const y = Math.sin(t * (2 + i * 0.7) + p.phase) * localAmp;
-      p.g.position.set(p.baseX, y, 0);
-      // etiqueta en pantalla
-      if (p.labelEl) {
-        const v = new THREE.Vector3(p.baseX, y + 0.5, 0).project(camera);
-        const x = (v.x * 0.5 + 0.5) * window.innerWidth;
-        const y2 = (-v.y * 0.5 + 0.5) * window.innerHeight;
-        p.labelEl.style.transform = `translate(${x}px, ${y2}px)`;
-        p.labelEl.style.opacity = String(o * 0.9);
-      }
-    });
-
-    stringMesh.material.opacity = 0.95 * o;
-    lineMesh.material.opacity = 0.8 * o;
-    stringGroup.rotation.y = t * 0.08;
-  }
-
-  // ============================================================
-  // CAPA 2 — DOMAIN WALLS (2D)
-  // Membranas reales: fluctuaciones = Materia Oscura
-  // Congeladas (v=0) → ecuación estado w = -1 = Energía Oscura
-  // ============================================================
-  const dwGroup = new THREE.Group();
-  scene.add(dwGroup);
-
-  const DW_SIZE = 6, DW_SEG = 48;
-  const dwGeo = new THREE.PlaneGeometry(DW_SIZE, DW_SIZE, DW_SEG, DW_SEG);
-  const dwMat = new THREE.MeshPhongMaterial({
-    color: COL[2], side: THREE.DoubleSide, transparent: true, opacity: 0.55,
-    emissive: COL[2], emissiveIntensity: 0.25, shininess: 50
+  const memMat = new THREE.MeshPhongMaterial({
+    color: C2, side: THREE.DoubleSide, transparent: true, opacity: 0,
+    emissive: C2, emissiveIntensity: 0.2, shininess: 60
   });
-  const dwMesh = new THREE.Mesh(dwGeo, dwMat);
-  dwMesh.scale.set(0.0001, 0.0001, 1);
-  dwGroup.add(dwMesh);
+  const memMesh = new THREE.Mesh(memGeo, memMat);
+  scene.add(memMesh);
 
-  // Puntos de fluctuación (DM) sobre la pared
-  const fluctCount = 60 * 60;
-  const fluctGeo = new THREE.BufferGeometry();
-  const fluctPos = new Float32Array(fluctCount * 3);
-  const fluctData = [];
-  for (let i = 0; i < fluctCount; i++) {
-    const ix = i % 60, iy = Math.floor(i / 60);
-    fluctData.push({
-      x: (ix / 59 - 0.5) * DW_SIZE,
-      y: (iy / 59 - 0.5) * DW_SIZE,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.8 + Math.random() * 1.2
-    });
-  }
-  fluctGeo.setAttribute('position', new THREE.BufferAttribute(fluctPos, 3));
-  const fluctMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.035, transparent: true, opacity: 0.7 });
-  const fluctMesh = new THREE.Points(fluctGeo, fluctMat);
-  dwGroup.add(fluctMesh);
+  // Puntos de fluctuación sobre la membrana (DM)
+  const nFluct = 80 * 80;
+  const flGeo = new THREE.BufferGeometry();
+  const flPos = new Float32Array(nFluct * 3);
+  flGeo.setAttribute('position', new THREE.BufferAttribute(flPos, 3));
+  const flMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.025, transparent: true, opacity: 0 });
+  const flMesh = new THREE.Points(flGeo, flMat);
+  scene.add(flMesh);
 
-  // Partículas DM "proyectadas" al 3D (puntos que emergen de la pared)
-  const dmCount = 120;
+  // DM proyectado al 3D (puntos que emergen)
+  const nDM = 180;
   const dmGeo = new THREE.BufferGeometry();
-  const dmPos = new Float32Array(dmCount * 3);
-  const dmData = [];
-  for (let i = 0; i < dmCount; i++) {
-    dmData.push({
-      x: (Math.random() - 0.5) * DW_SIZE * 1.5,
-      y: (Math.random() - 0.5) * DW_SIZE * 1.5,
-      z: (Math.random() - 0.5) * DW_SIZE * 2,
-      speed: 0.3 + Math.random() * 0.5,
-      phase: Math.random() * Math.PI * 2
-    });
-  }
+  const dmPos = new Float32Array(nDM * 3);
   dmGeo.setAttribute('position', new THREE.BufferAttribute(dmPos, 3));
-  const dmMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 0.08, transparent: true, opacity: 0.6 });
+  const dmMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 0.07, transparent: true, opacity: 0 });
   const dmMesh = new THREE.Points(dmGeo, dmMat);
-  dwGroup.add(dmMesh);
+  scene.add(dmMesh);
 
-  // "Congelación": cuando la pared se detiene, se vuelve DE
-  let freezeProgress = 0;
-
-  function updateDW(t, vis, membraneScale, wrap3D) {
-    const o = vis || 0;
-    if (o < 0.01) {
-      dwMesh.visible = false; fluctMesh.visible = false; dmMesh.visible = false; return;
-    }
-    dwMesh.visible = true; fluctMesh.visible = true; dmMesh.visible = true;
-
-    const msc = Math.max(0.0001, membraneScale || 0);
-    dwMesh.scale.set(msc, msc, 1);
-
-    // La pared oscila y "fluctúa" (DM)
-    const freezeTarget = wrap3D || 0; // en 3D se congela
-    freezeProgress = ease(freezeProgress, freezeTarget, 2, 1/60);
-    const frozen = freezeProgress;
-
-    const p = dwGeo.attributes.position.array;
-    const amp = 0.4 * (1 - frozen * 0.7);
-    for (let i = 0; i <= DW_SEG; i++) {
-      for (let j = 0; j <= DW_SEG; j++) {
-        const idx = (i * (DW_SEG + 1) + j) * 3;
-        const x = (i / DW_SEG - 0.5) * DW_SIZE;
-        const y = (j / DW_SEG - 0.5) * DW_SIZE;
-        const z = Math.sin(x * 1.3 + t * (1.4 - frozen)) *
-                  Math.cos(y * 1.3 + t * (1.1 - frozen)) * amp;
-        p[idx] = x; p[idx + 1] = y; p[idx + 2] = z;
-      }
-    }
-    dwGeo.attributes.position.needsUpdate = true;
-    dwGeo.computeVertexNormals();
-
-    // Fluctuaciones sobre la pared (DM)
-    const fp = fluctMesh.geometry.attributes.position.array;
-    fluctData.forEach((d, i) => {
-      const fx = d.x + Math.sin(d.phase + t * d.speed) * 0.2 * (1 - frozen);
-      const fy = d.y + Math.cos(d.phase + t * d.speed * 1.3) * 0.2 * (1 - frozen);
-      const fz = Math.sin(d.x * 1.2 + t * (1.5 - frozen)) * Math.cos(d.y * 1.2 + t * (1.1 - frozen)) * amp;
-      fp[i * 3] = fx; fp[i * 3 + 1] = fy; fp[i * 3 + 2] = fz;
-    });
-    fluctMesh.geometry.attributes.position.needsUpdate = true;
-
-    // DM proyectado al 3D
-    const dp = dmMesh.geometry.attributes.position.array;
-    dmData.forEach((d, i) => {
-      dp[i * 3]     = d.x + Math.sin(t * d.speed + d.phase) * 0.15;
-      dp[i * 3 + 1] = d.y + Math.cos(t * d.speed * 1.2 + d.phase) * 0.15;
-      dp[i * 3 + 2] = d.z + Math.sin(t * d.speed * 0.7 + d.phase) * 0.2;
-    });
-    dmMesh.geometry.attributes.position.needsUpdate = true;
-
-    // Opacidad: al congelarse, la pared se vuelve "DE" (más transparente/estática)
-    dwMat.opacity = 0.55 * (1 - frozen * 0.4) * (vis || 1);
-    fluctMesh.material.opacity = 0.7 * (1 - frozen * 0.8) * (vis || 1);
-    dmMesh.material.opacity = 0.6 * (vis || 1);
-    dwMesh.scale.set(msc, msc, 1);
-    dwMesh.visible = msc > 0.001;
-
-    dwGroup.rotation.y = t * 0.05 * (1 - frozen * 0.5);
-  }
-
-  // ============================================================
-  // CAPA 3 — VOLUMEN 3D + CONCIENCIA
-  // Teorema de Ehrenfest: órbitas estables SOLO en 3D
-  // Conciencia = recursividad (bucle causal cerrado)
-  // ============================================================
+  // --- 3. EL VOLUMEN 3D (núcleo + órbitas + recursividad) ---
   const volGroup = new THREE.Group();
   scene.add(volGroup);
 
-  // Núcleo atómico
   const nucleus = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 20, 20),
-    new THREE.MeshPhongMaterial({ color: COL[3], emissive: COL[3], emissiveIntensity: 0.6, shininess: 100 })
+    new THREE.SphereGeometry(0.5, 24, 24),
+    new THREE.MeshPhongMaterial({ color: C3, emissive: C3, emissiveIntensity: 0.6, shininess: 100 })
   );
-  volGroup.add(nucleus);
+  nucleus.visible = false; volGroup.add(nucleus);
 
-  // Electrones en órbitas ESTABLES (solo en 3D)
   const ORBITS = [
-    { r: 1.3, speed: 1.8, tilt: 0.3, n: 1 },
-    { r: 2.0, speed: 1.2, tilt: 1.1, n: 2 },
-    { r: 2.8, speed: 0.8, tilt: 2.0, n: 3 },
+    { r: 1.3, speed: 1.8, tilt: 0.3 },
+    { r: 2.0, speed: 1.2, tilt: 1.1 },
+    { r: 2.8, speed: 0.8, tilt: 2.0 },
   ];
-  const orbitRings = ORBITS.map(o => {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(o.r, 0.018, 8, 80),
-      new THREE.MeshBasicMaterial({ color: COL[3], transparent: true, opacity: 0.35 })
-    );
-    ring.rotation.x = o.tilt;
-    ring.rotation.z = 0.5;
-    volGroup.add(ring);
-    return ring;
-  });
   const electrons = ORBITS.map(o => {
     const e = new THREE.Mesh(
-      new THREE.SphereGeometry(0.11, 14, 14),
-      new THREE.MeshBasicMaterial({ color: COL[3] })
+      new THREE.SphereGeometry(0.1, 14, 14),
+      new THREE.MeshBasicMaterial({ color: C3 })
     );
-    volGroup.add(e);
+    e.visible = false; volGroup.add(e);
     return { mesh: e, o };
   });
+  const orbitRings = ORBITS.map(o => {
+    const r = new THREE.Mesh(
+      new THREE.TorusGeometry(o.r, 0.018, 8, 80),
+      new THREE.MeshBasicMaterial({ color: C3, transparent: true, opacity: 0 })
+    );
+    r.rotation.x = o.tilt; r.visible = false; volGroup.add(r);
+    return r;
+  });
 
-  // "Recursividad" de la conciencia: bucle que se observa a sí mismo
+  // Bucle recursividad (conciencia)
   const recLoop = new THREE.Mesh(
     new THREE.TorusGeometry(1.6, 0.04, 16, 120),
-    new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.4 })
+    new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0 })
   );
-  recLoop.rotation.x = Math.PI / 2;
-  volGroup.add(recLoop);
+  recLoop.rotation.x = Math.PI / 2; recLoop.visible = false; volGroup.add(recLoop);
 
-  // Esfera envolvente = domain wall cerrada (contorno 2D que guarda info 3D)
+  // Esfera envolvente = domain wall cerrada (contorno 2D que se cierra)
   const holoshell = new THREE.Mesh(
     new THREE.SphereGeometry(3.3, 40, 40),
-    new THREE.MeshBasicMaterial({ color: 0x9CA3D6, transparent: true, opacity: 0.08 })
+    new THREE.MeshBasicMaterial({ color: 0x9CA3D6, transparent: true, opacity: 0 })
   );
   const holowire = new THREE.Mesh(
     new THREE.SphereGeometry(3.3, 40, 40),
-    new THREE.MeshBasicMaterial({ color: COL[2], wireframe: true, transparent: true, opacity: 0.35 })
+    new THREE.MeshBasicMaterial({ color: C2, wireframe: true, transparent: true, opacity: 0 })
   );
-  volGroup.add(holoshell);
-  volGroup.add(holowire);
+  holoshell.visible = false; holowire.visible = false;
+  volGroup.add(holoshell); volGroup.add(holowire);
 
-  function updateVolume(t, vis, wrap3D) {
-    const o = vis || 0;
-    if (o < 0.01) {
-      volGroup.children.forEach(c => c.visible = false); return;
-    }
-    volGroup.children.forEach(c => c.visible = true);
-
-    const ws = Math.max(0, wrap3D || 0);
-
-    // Núcleo y órbitas se encienden con wrap3D
-    nucleus.visible = ws > 0.02;
-    electrons.forEach(e => e.mesh.visible = ws > 0.02);
-    orbitRings.forEach(r => { r.visible = ws > 0.02; r.material.opacity = 0.35 * o * ws; });
-
-    // Electrones orbitando
-    electrons.forEach((el, i) => {
-      const a = t * el.o.speed + i;
-      const x = el.o.r * Math.cos(a);
-      const z = el.o.r * Math.sin(a);
-      el.mesh.position.set(x, 0, z);
-      el.mesh.position.applyAxisAngle(new THREE.Vector3(1, 0, 0), el.o.tilt);
-    });
-
-    // Bucle de recursividad (conciencia): gira y pulsa
-    recLoop.visible = ws > 0.1;
-    recLoop.rotation.y = t * 0.8;
-    recLoop.scale.setScalar(1 + 0.15 * Math.sin(t * 3) * ws);
-
-    // Esfera envolvente (domain wall cerrada) crece con wrap3D
-    const s = 0.2 + 0.8 * ws;
-    holoshell.scale.setScalar(s);
-    holowire.scale.setScalar(s);
-    holoshell.material.opacity = (0.06 + 0.12 * ws) * o;
-    holowire.material.opacity = (0.15 + 0.25 * ws) * o;
-    holoshell.visible = ws > 0.02;
-    holowire.visible = ws > 0.02;
-    holowire.rotation.y = t * 0.08;
-    holowire.rotation.x = t * 0.05;
-
-    volGroup.rotation.y = t * 0.2;
-  }
-
-  // ============================================================
-  // CAPA 4 — HIPERESFERA 4D (Kaluza-Klein)
-  // Proyección 5D→4D: EM es sombra de gravedad 5D
-  // σ frontera = DE (R₀ = 5.7 Gpc, σ ≈ 10⁻¹⁰ J/m²)
-  // SO(10) = 1+2+3+4 = 10
-  // ============================================================
-  const hsGroup = new THREE.Group();
-  scene.add(hsGroup);
-
-  const HS_R = 4.8;
-  const hsGeo = new THREE.SphereGeometry(HS_R, 56, 56);
-  const hsMat = new THREE.MeshPhongMaterial({
-    color: COL[4], wireframe: true, transparent: true, opacity: 0.3,
-    emissive: COL[4], emissiveIntensity: 0.15
-  });
-  const hsMesh = new THREE.Mesh(hsGeo, hsMat);
+  // --- 4. LA HIPERESFERA 4D ---
+  const hsGroup = new THREE.Group(); scene.add(hsGroup);
+  const HS_R = 5.2;
+  const hsMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(5.2, 56, 56),
+    new THREE.MeshPhongMaterial({ color: C4, wireframe: true, transparent: true, opacity: 0, emissive: C4, emissiveIntensity: 0.15 })
+  );
   hsGroup.add(hsMesh);
 
-  // Capas concéntricas (estructura SO(10) anidada)
-  for (let i = 1; i <= 3; i++) {
-    const sh = new THREE.Mesh(
-      new THREE.SphereGeometry(HS_R * (1 - i * 0.05), 48, 48),
-      new THREE.MeshBasicMaterial({ color: COL[4], wireframe: true, transparent: true, opacity: 0.04 })
-    );
-    hsGroup.add(sh);
-  }
-
-  // Rayos KK: EM proyectado 5D→4D (partículas que viajan hacia el centro)
-  const rayC = 200;
+  // Rayos KK
+  const nRay = 160;
   const rayGeo = new THREE.BufferGeometry();
-  const rayPos = new Float32Array(rayC * 3);
+  const rayPos = new Float32Array(nRay * 3);
+  rayGeo.setAttribute('position', new THREE.BufferAttribute(rayPos, 3));
   const rayData = [];
-  for (let i = 0; i < rayC; i++) {
+  for (let i = 0; i < nRay; i++) {
     const th = Math.random() * Math.PI * 2;
     const ph = Math.acos(2 * Math.random() - 1);
     rayData.push({ th, ph, speed: 0.35 + Math.random() * 0.5, off: Math.random() * 40 });
   }
   rayGeo.setAttribute('position', new THREE.BufferAttribute(rayPos, 3));
-  const rayMat = new THREE.PointsMaterial({ color: COL[4], size: 0.06, transparent: true, opacity: 0.85 });
-  const rays = new THREE.Points(rayGeo, rayMat);
-  hsGroup.add(rays);
+  const rayMat = new THREE.PointsMaterial({ color: C4, size: 0.06, transparent: true, opacity: 0 });
+  const rayMesh = new THREE.Points(rayGeo, rayMat);
+  hsGroup.add(rayMesh);
 
-  // Campo EM visible: ondas que se propagan desde la hiperesfera hacia dentro
-  const emCount = 80;
+  // EM proyectado
+  const nEM = 100;
   const emGeo = new THREE.BufferGeometry();
-  const emPos = new Float32Array(emCount * 3);
+  const emPos = new Float32Array(nEM * 3);
+  emGeo.setAttribute('position', new THREE.BufferAttribute(emPos, 3));
   const emData = [];
-  for (let i = 0; i < emCount; i++) {
+  for (let i = 0; i < nEM; i++) {
     const th = Math.random() * Math.PI * 2;
     const ph = Math.acos(2 * Math.random() - 1);
-    emData.push({ th, ph, r: HS_R * (0.5 + Math.random() * 0.5), speed: 0.8 + Math.random() * 1.2 });
+    emData.push({ th, ph, r: 2.6 + Math.random() * 1.8, speed: 0.8 + Math.random() * 1.2 });
   }
   emGeo.setAttribute('position', new THREE.BufferAttribute(emPos, 3));
-  const emMat = new THREE.PointsMaterial({ color: 0xffeb3b, size: 0.05, transparent: true, opacity: 0.7 });
+  const emMat = new THREE.PointsMaterial({ color: 0xffeb3b, size: 0.05, transparent: true, opacity: 0 });
   const emMesh = new THREE.Points(emGeo, emMat);
   hsGroup.add(emMesh);
 
-  function updateHypersphere(t, vis) {
-    const o = vis || 0;
-    if (o < 0.01) { hsGroup.children.forEach(c => c.visible = false); return; }
-    hsGroup.children.forEach(c => c.visible = true);
-
-    hsMesh.rotation.x = t * 0.06;
-    hsMesh.rotation.y = t * 0.1;
-    hsMesh.material.opacity = 0.3 * o;
-
-    // Rayos KK
-    const rp = rays.geometry.attributes.position.array;
-    const up = new THREE.Vector3();
-    for (let i = 0; i < rayC; i++) {
-      const rd = rayData[i];
-      const frac = (t * rd.speed + rd.off) % 1;
-      const rad = HS_R * Math.pow(1 - frac, 1.3);
-      up.set(Math.sin(rd.ph) * Math.cos(rd.th), Math.sin(rd.ph) * Math.sin(rd.th), Math.cos(rd.ph));
-      rp[i * 3] = up.x * rad; rp[i * 3 + 1] = up.y * rad; rp[i * 3 + 2] = up.z * rad;
-    }
-    rays.geometry.attributes.position.needsUpdate = true;
-    rays.material.opacity = 0.85 * o;
-
-    // Campo EM (proyección KK)
-    const ep = emMesh.geometry.attributes.position.array;
-    emData.forEach((d, i) => {
-      const r = d.r * (0.9 + 0.1 * Math.sin(t * d.speed));
-      const x = r * Math.sin(d.ph) * Math.cos(d.th + t * d.speed * 0.5);
-      const y = r * Math.sin(d.ph) * Math.sin(d.th + t * d.speed * 0.5);
-      const z = r * Math.cos(d.ph);
-      ep[i * 3] = x; ep[i * 3 + 1] = y; ep[i * 3 + 2] = z;
-    });
-    emMesh.geometry.attributes.position.needsUpdate = true;
-    emMesh.material.opacity = 0.7 * o;
-
-    hsGroup.rotation.y = t * 0.015;
-  }
-
-  // ============================================================
-  // ESTRELLAS DE FONDO
-  // ============================================================
-  const starCount = 1100;
+  // --- Estrellas fondo ---
   const sG = new THREE.BufferGeometry();
-  const sP = new Float32Array(starCount * 3);
-  for (let i = 0; i < starCount; i++) {
-    const r = 12 + Math.random() * 50;
-    const th = Math.random() * Math.PI * 2;
-    const ph = Math.acos(2 * Math.random() - 1);
-    sP[i * 3] = r * Math.sin(ph) * Math.cos(th);
-    sP[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
-    sP[i * 3 + 2] = r * Math.cos(ph);
+  const sP = new Float32Array(1000 * 3);
+  for (let i = 0; i < 1000; i++) {
+    const r = 12 + Math.random() * 50, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    sP[i*3] = r * Math.sin(ph) * Math.cos(th);
+    sP[i*3+1] = r * Math.sin(ph) * Math.sin(th);
+    sP[i*3+2] = r * Math.cos(ph);
   }
   sG.setAttribute('position', new THREE.BufferAttribute(sP, 3));
-  const stars = new THREE.Points(sG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.4 }));
-  scene.add(stars);
+  scene.add(new THREE.Points(sG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.4 })));
 
   // ============================================================
-  // ESTADO Y NAVEGACIÓN
+  // MAPEO SCROLL → t (0 a 1 continuo)
+  // Cada sección ocupa un rango de t
   // ============================================================
-  const SCENES = {
-    intro: { show: [1, 2, 3, 4], zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.9 },
-    1:     { show: [1],          zoom: 6.5, membraneScale: 0, wrap3D: 0, stringShow: 1 },
-    2:     { show: [1, 2],        zoom: 11, membraneScale: 1, wrap3D: 0, stringShow: 0.9 },
-    3:     { show: [1, 2, 3],     zoom: 17, membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
-    4:     { show: [1, 2, 3, 4],  zoom: 26, membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
-    5:     { show: [1, 2, 3, 4],  zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
-    6:     { show: [1, 2, 3, 4],  zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
-    7:     { show: [1, 2, 3, 4],  zoom: 22, membraneScale: 1, wrap3D: 1, stringShow: 0.8 },
-    8:     { show: [1, 2, 3, 4],  zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
-    9:     { show: [1, 2, 3, 4],  zoom: 34, membraneScale: 1, wrap3D: 1, stringShow: 0.85 },
+  const SECTION_T = {
+    intro:  0.00,
+    dim1:   0.125,   // 1D: cuerda pura
+    dim2:   0.375,   // 2D: barrido→membrana
+    dim3:   0.625,   // 3D: membrana→volumen
+    dim4:   0.875,   // 4D: hiperesfera
+    dim5:   0.875, dim6: 0.875, dim7: 0.875, dim8: 0.875, dim9: 1.0
   };
 
-  const state = { active: 'intro', targetZoom: 34, vis: { 1: 0.9, 2: 0.9, 3: 0.8, 4: 0.7 }, membraneScale: 1, wrap3D: 1, stringShow: 0.9, mouseX: 0, mouseY: 0 };
-  const soft = { zoom: 34, vis1: 0.9, vis2: 0.9, vis3: 0.8, vis4: 0.7, membraneScale: 1, wrap3D: 1, stringShow: 0.9 };
+  // Estado de animación suave
+  const state = { targetT: 0, t: 0 };
+  const ZOOM_BASE = { intro: 30, dim1: 7, dim2: 10, dim3: 15, dim4: 24 };
 
-  window.addEventListener('mousemove', (e) => { state.mouseX = (e.clientX / window.innerWidth - 0.5) * 2; state.mouseY = (e.clientY / window.innerHeight - 0.5) * 2; });
-
-  function onSectionChange(e) {
+  window.addEventListener('sectionchange', e => {
     const map = { intro: 'intro', dim1: '1', dim2: '2', dim3: '3', dim4: '4', dim5: '5', dim6: '6', dim7: '7', dim8: '8', dim9: '9' };
     const key = map[e.detail.id] || 'intro';
-    const s = SCENES[key] || SCENES.intro;
-    state.active = key;
-    state.targetZoom = s.zoom;
-    const has = {}; [1, 2, 3, 4].forEach(n => { has[n] = s.show.includes(n) ? 1 : 0; });
-    state.vis = has;
-    state.membraneScale = s.membraneScale;
-    state.wrap3D = s.wrap3D;
-    state.stringShow = s.stringShow;
-  }
-  window.addEventListener('sectionchange', onSectionChange);
+    state.targetT = SECTION_T[key] || 0;
+    state.targetZoom = ZOOM_BASE[key] || 30;
+  });
 
-  window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+  window.addEventListener('mousemove', e => {
+    state.mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    state.mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 
   // ============================================================
-  // LOOP PRINCIPAL
+  // FUNCIÓN PRINCIPAL: dado t ∈ [0,1], actualiza TODO
+  // ============================================================
+  function updateAll(t) {
+    // --- Parámetros suaves por fase ---
+    // Fase 1: 0→0.25  cuerda pura
+    // Fase 2: 0.25→0.5  barrido→membrana
+    // Fase 3: 0.5→0.75  membrana→esfera+volumen
+    // Fase 4: 0.75→1  hiperesfera
+
+    const p1 = THREE.MathUtils.clamp((t - 0) / 0.25, 0, 1);      // cuerda visible
+    const p2 = THREE.MathUtils.clamp((t - 0.25) / 0.25, 0, 1);    // membrana crece
+    const p3 = THREE.MathUtils.clamp((t - 0.5) / 0.25, 0, 1);     // membrana→volumen
+    const p4 = THREE.MathUtils.clamp((t - 0.75) / 0.25, 0, 1);    // hiperesfera
+
+    // --- 1. CUERDA ---
+    const curveAmp = 0.55 * (1 + p3 * 0.3); // crece un poco en fases 3-4
+    const pts = getCurvePoints(t * 4, curveAmp);
+    for (let i = 0; i <= CURVE_SEG; i++) {
+      const v = pts[i];
+      sPos[i*3] = v.x; sPos[i*3+1] = v.y; sPos[i*3+2] = v.z;
+      lineGeo.attributes.position.array[i*3] = v.x;
+      lineGeo.attributes.position.array[i*3+1] = v.y;
+      lineGeo.attributes.position.array[i*3+2] = v.z;
+    }
+    stringGeo.attributes.position.needsUpdate = true;
+    lineGeo.attributes.position.needsUpdate = true;
+
+    stringPts.material.opacity = p1 > 0 ? 1 : 0;
+    stringLine.material.opacity = p1 > 0 ? 0.9 : 0;
+    stringPts.visible = p1 > 0.01;
+    stringLine.visible = p1 > 0.01;
+
+    // Partículas (modos = partículas)
+    for (let i = 0; i < nParts; i++) {
+      const base = partEls[i].baseX;
+      const phase = partEls[i].phase;
+      const y = Math.sin(t * 5 + phase) * 0.3;
+      pPos[i*3] = base; pPos[i*3+1] = y; pPos[i*3+2] = 0;
+      if (partEls[i].el) {
+        const v = new THREE.Vector3(base, y + 0.5, 0).project(camera);
+        partEls[i].el.style.transform = `translate(${(v.x*0.5+0.5)*innerWidth}px, ${(-v.y*0.5+0.5)*innerHeight}px)`;
+        partEls[i].el.style.opacity = String(p1 * 0.9);
+      }
+    }
+    partGeo.attributes.position.needsUpdate = true;
+    partMesh.material.opacity = p1;
+    partMesh.visible = p1 > 0.01;
+
+    // --- 2. MEMBRANA (barrido de la curva) ---
+    // La membrana ES el barrido de la curva: una "cinta" que sigue la curva
+    if (p2 > 0.01) {
+      memMesh.visible = true; memMesh.material.opacity = 0.55 * p2;
+      flMesh.visible = true; flMesh.material.opacity = 0.7 * p2 * (1 - THREE.MathUtils.clamp((t-0.5)/0.25, 0, 1));
+      dmMesh.visible = true; dmMesh.material.opacity = 0.6 * p2;
+
+      // Generar membrana como superficie de revolución/barrido de la curva
+      for (let j = 0; j < MEM_H; j++) {
+        const u = j / (MEM_H - 1); // 0..1 a lo largo de la curva
+        const curveT = t * 4;
+        const amp = 0.55;
+        // Posición base en la curva
+        const cx = (u - 0.5) * L;
+        const cy = Math.sin(cx * 2.5 + curveT * 3) * amp;
+        const cz = Math.cos(cx * 2.5 * 1.7 + curveT * 3) * amp * 0.6;
+
+        for (let i = 0; i < MEM_W; i++) {
+          const v = i / MEM_W; // 0..1 angular
+          const angle = v * Math.PI * 2;
+          // Radio de la membrana (crece con p2)
+          const R = 1.8 * p2;
+          // Tangente a la curva para orientar el anillo
+          const du = 0.01;
+          const u2 = THREE.MathUtils.clamp(u + du, 0, 1);
+          const cx2 = (u2 - 0.5) * L;
+          const cy2 = Math.sin(cx2 * 2.5 + curveT * 3) * amp;
+          const cz2 = Math.cos(cx2 * 2.5 * 1.7 + curveT * 3) * amp * 0.6;
+          const tx = cx2 - cx, ty = cy2 - cy, tz = cz2 - cz;
+          const tlen = Math.sqrt(tx*tx + ty*ty + tz*tz) || 1;
+          // Normal y binormal para orientar el anillo
+          const nx = tx / tlen, ny = ty / tlen, nz = tz / tlen;
+          // Vector perpendicular arbitrario
+          const px = -nz, pz = nx, py = 0;
+          const plen = Math.sqrt(px*px + py*py + pz*pz) || 1;
+          const bx = py * nz - pz * ny;
+          const by = pz * nx - px * nz;
+          const bz = px * ny - py * nx;
+
+          const rx = cx + R * (Math.cos(angle) * bx + Math.sin(angle) * px / plen);
+          const ry = cy + R * (Math.cos(angle) * by + Math.sin(angle) * py / plen);
+          const rz = cz + R * (Math.cos(angle) * bz + Math.sin(angle) * pz / plen);
+
+          const idx = (j * MEM_W + i) * 3;
+          mPos[idx] = rx; mPos[idx+1] = ry; mPos[idx+2] = rz;
+          mUV[idx] = v; mUV[idx+1] = u;
+        }
+      }
+      memGeo.attributes.position.needsUpdate = true;
+      memGeo.computeVertexNormals();
+    } else {
+      memMesh.visible = false;
+    }
+
+    // Fluctuaciones DM sobre membrana
+    if (p2 > 0.01) {
+      const freeze = THREE.MathUtils.clamp((t - 0.5) / 0.25, 0, 1);
+      const amp = 0.4 * (1 - freeze * 0.7);
+      for (let i = 0; i < nFluct; i++) {
+        // regeneración simple
+        const u = Math.random(), v = Math.random();
+        const cx = (u - 0.5) * 4;
+        const cy = (v - 0.5) * 4;
+        const cz = Math.sin(cx * 1.3 + t * (1.4 - freeze)) * Math.cos(cy * 1.3 + t * (1.1 - freeze)) * amp;
+        flPos[i*3] = cx; flPos[i*3+1] = cy; flPos[i*3+2] = cz;
+      }
+      flGeo.attributes.position.needsUpdate = true;
+    }
+
+    // DM proyectado
+    if (p2 > 0.01) {
+      for (let i = 0; i < nDM; i++) {
+        dmPos[i*3] += Math.sin(t * 0.5 + i) * 0.01;
+        dmPos[i*3+1] += Math.cos(t * 0.7 + i) * 0.01;
+        dmPos[i*3+2] += Math.sin(t * 0.3 + i) * 0.01;
+      }
+      dmGeo.attributes.position.needsUpdate = true;
+    }
+
+    // --- 3. VOLUMEN (se enciende en fase 3) ---
+    const volOn = p3 > 0.02;
+    volGroup.children.forEach(c => c.visible = volOn);
+    if (volOn) {
+      const ws = p3;
+      nucleus.visible = true;
+      electrons.forEach(e => e.mesh.visible = true);
+      orbitRings.forEach(r => { r.visible = true; r.material.opacity = 0.35 * ws; });
+      recLoop.visible = true; recLoop.material.opacity = 0.4 * ws;
+      recLoop.rotation.y = t * 0.8;
+      recLoop.scale.setScalar(1 + 0.15 * Math.sin(t * 3) * ws);
+
+      // Electrones
+      electrons.forEach((el, i) => {
+        const a = t * el.o.speed + i;
+        const x = el.o.r * Math.cos(a), z = el.o.r * Math.sin(a);
+        el.mesh.position.set(x, 0, z);
+        el.mesh.position.applyAxisAngle(new THREE.Vector3(1,0,0), el.o.tilt);
+      });
+
+      // Esfera envolvente = membrana cerrada
+      const s = 0.2 + 0.8 * ws;
+      holoshell.visible = true; holowire.visible = true;
+      holoshell.scale.setScalar(s); holowire.scale.setScalar(s);
+      holoshell.material.opacity = (0.08 + 0.12 * ws);
+      holowire.material.opacity = (0.15 + 0.25 * ws);
+      holowire.rotation.y = t * 0.08;
+    }
+
+    // --- 4. HIPERESFERA 4D ---
+    const hsOn = p4 > 0.02;
+    hsGroup.children.forEach(c => c.visible = hsOn);
+    if (hsOn) {
+      hsMesh.visible = true; hsMesh.material.opacity = 0.3 * p4;
+      hsMesh.rotation.x = t * 0.06; hsMesh.rotation.y = t * 0.1;
+
+      // Rayos KK
+      rayMesh.visible = true; rayMesh.material.opacity = 0.85 * p4;
+      const rp = rayMesh.geometry.attributes.position.array;
+      const up = new THREE.Vector3();
+      for (let i = 0; i < nRay; i++) {
+        const rd = rayData[i];
+        const frac = (t * rd.speed + rd.off) % 1;
+        const rad = 5.2 * Math.pow(1 - frac, 1.3);
+        up.set(Math.sin(rd.ph)*Math.cos(rd.th), Math.sin(rd.ph)*Math.sin(rd.th), Math.cos(rd.ph));
+        rp[i*3] = up.x * rad; rp[i*3+1] = up.y * rad; rp[i*3+2] = up.z * rad;
+      }
+      rayMesh.geometry.attributes.position.needsUpdate = true;
+      rayMesh.material.opacity = 0.85 * p4;
+
+      // EM
+      emMesh.visible = true; emMesh.material.opacity = 0.7 * p4;
+      const ep = emMesh.geometry.attributes.position.array;
+      emData.forEach((d, i) => {
+        const r = d.r * (0.9 + 0.1 * Math.sin(t * d.speed));
+        ep[i*3] = r * Math.sin(d.ph) * Math.cos(d.th + t * d.speed * 0.5);
+        ep[i*3+1] = r * Math.sin(d.ph) * Math.sin(d.th + t * d.speed * 0.5);
+        ep[i*3+2] = r * Math.cos(d.ph);
+      });
+      emMesh.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  // ============================================================
+  // LOOP: scroll → t suave → updateAll(t)
   // ============================================================
   let last = performance.now();
   function animate(now) {
     const dt = Math.min((now - last) / 1000, 0.1);
-    const t = now / 1000;
     last = now;
 
-    soft.zoom = ease(soft.zoom, state.targetZoom, 2.2, dt);
-    soft.vis1 = ease(soft.vis1, state.vis[1] || 0, 3, dt);
-    soft.vis2 = ease(soft.vis2, state.vis[2] || 0, 3, dt);
-    soft.vis3 = ease(soft.vis3, state.vis[3] || 0, 3, dt);
-    soft.vis4 = ease(soft.vis4, state.vis[4] || 0, 3, dt);
-    soft.membraneScale = ease(soft.membraneScale, state.membraneScale, 2.5, dt);
-    soft.wrap3D = ease(soft.wrap3D, state.wrap3D, 2.2, dt);
-    soft.stringShow = ease(soft.stringShow, state.stringShow, 2.5, dt);
-
-    camera.position.z = ease(camera.position.z, soft.zoom, 2.2, dt);
-    camera.position.x = ease(camera.position.x, state.mouseX * 1.3, 2, dt);
-    camera.position.y = ease(camera.position.y, -state.mouseY * 0.8, 2, dt);
+    // Suavizar t y zoom
+    state.t = ease(state.t, state.targetT, 2.5, dt);
+    camera.position.z = ease(camera.position.z, state.targetZoom, 2.2, dt);
+    camera.position.x = ease(camera.position.x, (state.mouseX||0) * 1.2, 2, dt);
+    camera.position.y = ease(camera.position.y, -(state.mouseY||0) * 0.8, 2, dt);
     camera.lookAt(0, 0, 0);
 
-    updateString(t, soft.vis1, soft.wrap3D, soft.stringShow);
-    updateDW(t, soft.vis2, soft.membraneScale, soft.wrap3D);
-    updateVolume(t, soft.vis3, soft.wrap3D);
-    updateHypersphere(t, soft.vis4);
-
-    stars.rotation.y = t * 0.018;
-
+    updateAll(state.t);
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
