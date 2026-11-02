@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    name: HTML, terceros y secretos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Configurar Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Validar HTML
+        run: npx --yes html-validate@9 index.html capas/index.html
+
+      - name: Comprobar que no se reintroducen CDNs
+        run: |
+          if grep -rnE "fonts\.googleapis|fonts\.gstatic|cdnjs|unpkg|jsdelivr" index.html capas/index.html; then
+            echo "Hay recursos de terceros en el HTML"; exit 1;
+          fi
+          test -f js/three.min.js && test -f js/d3.min.js
+          test -f css/fonts.css
+          echo "OK: sin dependencias externas"
+
+      - name: Escanear secretos
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
