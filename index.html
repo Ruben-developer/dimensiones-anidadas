@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Dimensiones Anidadas — el modelo 1+2+3+4: el universo como capas vibrantes que se comunican entre sí." />
   <title>Dimensiones Anidadas — Modelo 1+2+3+4</title>
+  <meta name="theme-color" content="#050510" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <!-- Todo se sirve desde el propio dominio: sin CDN ni tipografías de terceros.
+       connect-src 'none': la página no hace ninguna petición de red. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'" />
 
-  <!-- Fuentes -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Fuentes auto-hospedadas -->
+  <link rel="stylesheet" href="css/fonts.css" />
 
   <!-- Estilos -->
   <link rel="stylesheet" href="css/main.css" />
@@ -43,10 +46,10 @@
 
   <!-- Navegación de capas (fijo) -->
   <nav id="dims">
-    <button data-dim="1" class="dim-btn" aria-label="1D">1D</button>
-    <button data-dim="2" class="dim-btn" aria-label="2D">2D</button>
-    <button data-dim="3" class="dim-btn" aria-label="3D">3D</button>
-    <button data-dim="4" class="dim-btn" aria-label="4D">4D</button>
+    <button type="button" data-dim="1" class="dim-btn" aria-label="1D">1D</button>
+    <button type="button" data-dim="2" class="dim-btn" aria-label="2D">2D</button>
+    <button type="button" data-dim="3" class="dim-btn" aria-label="3D">3D</button>
+    <button type="button" data-dim="4" class="dim-btn" aria-label="4D">4D</button>
   </nav>
 
   <main>
@@ -142,7 +145,7 @@
           vasos comunicantes.
         </p>
       </div>
-      <div id="comm-diagram" class="comm-diagram" aria-label="Diagrama de flujos entre dimensiones"></div>
+      <div id="comm-diagram" class="comm-diagram" role="group" aria-label="Diagrama de flujos entre dimensiones"></div>
     </section>
 
     <!-- ========== SECCIÓN 6: EVIDENCIA ========== -->
@@ -159,7 +162,7 @@
         <div class="chart-card" id="card-wa">
           <h3>Energía oscura dinámica — w(z)</h3>
           <div id="svg-wa" class="chart-svg"></div>
-          <p class="chart-caption"><strong>DESI DR2:</strong> w > −1 a z ≲ 0.2 y w < −1 a z ≈ 0.75. La energía oscura no es constante (Λ): es dinámica.</p>
+          <p class="chart-caption"><strong>DESI DR2:</strong> w &gt; −1 a z ≲ 0.2 y w &lt; −1 a z ≈ 0.75. La energía oscura no es constante (Λ): es dinámica.</p>
         </div>
         <div class="chart-card" id="card-ok">
           <h3>Curvatura cósmica — Ω<sub>k</sub></h3>

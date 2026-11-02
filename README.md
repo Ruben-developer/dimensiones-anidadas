@@ -28,6 +28,18 @@ La capa 3D (`layers3d.js`) muestra **todas las dimensiones anidadas simultáneam
 - [GSAP](https://gsap.com/) + ScrollTrigger — animaciones de scroll
 - [Three.js](https://threejs.org/) — visualización 3D de las esferas anidadas
 - [D3.js](https://d3js.org/) — gráfica de datos cosmológicos (energía oscura w(z))
+- Inter y Space Grotesk auto-hospedadas en `css/fonts/` (SIL OFL 1.1)
+
+Todas las librerías están **vendorizadas** en `js/`: no se carga ninguna CDN en
+tiempo de ejecución. Ver [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+
+## Seguridad
+
+- CSP en `index.html` y `capas/index.html` con `connect-src 'none'`.
+- Sin peticiones de red, sin `eval` y sin manejadores inline.
+- CI: valida el HTML, comprueba que no se reintroduzcan CDNs y escanea secretos.
+- Cómo reportar un fallo: [`SECURITY.md`](SECURITY.md).
+- Licencia del código: MIT ([`LICENSE`](LICENSE)).
 
 ## Desarrollo local
 
@@ -53,20 +65,27 @@ https://Ruben-developer.github.io/dimensiones-anidadas/
 
 ```
 ├── index.html
+├── capas/index.html
 ├── css/
 │   ├── main.css
-│   └── sections.css
-├── js/
-│   ├── main.js
-│   ├── scroll.js
-│   ├── layers3d.js
-│   ├── communication.js
-│   ├── data.js
-│   └── consciousness.js
+│   ├── sections.css
+│   ├── fonts.css
+│   └── fonts/            # woff2 + OFL
+├── js/                   # librerías vendorizadas + código propio
 ├── data/
 │   └── cosmology.json
-└── .github/workflows/deploy.yml
+├── LICENSE
+├── SECURITY.md
+├── THIRD-PARTY-NOTICES.md
+└── .github/
+    ├── workflows/deploy.yml
+    └── workflows/ci.yml
 ```
+
+## Flujo de ramas
+
+`develop` es la revisión (CI) y `main` es producción (deploy a Pages). Los
+cambios se revisan en `develop` antes de pasar a `main`.
 
 ---
 

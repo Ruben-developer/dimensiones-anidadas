@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Capas Anidadas — 1D → 2D → 3D → 4D</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'" />
+  <link rel="stylesheet" href="../css/fonts.css" />
   <style>
     :root {
       --c1: #8B5CF6; --c2: #3B82F6; --c3: #10B981; --c4: #F59E0B;
@@ -77,10 +77,10 @@
 
   <!-- Selector de capas -->
   <div class="layer-picker" role="radiogroup" aria-label="Seleccionar capa">
-    <button class="layer-btn" data-layer="1" role="radio" aria-checked="true" title="1D — Cuerda vibrante">1D</button>
-    <button class="layer-btn" data-layer="2" role="radio" aria-checked="false" title="2D — Membrana vibrante">2D</button>
-    <button class="layer-btn" data-layer="3" role="radio" aria-checked="false" title="3D — Nuestro mundo">3D</button>
-    <button class="layer-btn" data-layer="4" role="radio" aria-checked="false" title="4D — Hiperesfera">4D</button>
+    <button type="button" class="layer-btn" data-layer="1" role="radio" aria-checked="true" title="1D — Cuerda vibrante">1D</button>
+    <button type="button" class="layer-btn" data-layer="2" role="radio" aria-checked="false" title="2D — Membrana vibrante">2D</button>
+    <button type="button" class="layer-btn" data-layer="3" role="radio" aria-checked="false" title="3D — Nuestro mundo">3D</button>
+    <button type="button" class="layer-btn" data-layer="4" role="radio" aria-checked="false" title="4D — Hiperesfera">4D</button>
   </div>
 
   <!-- Badge de expansión -->
@@ -460,6 +460,5 @@ function animate(now){
 }
 requestAnimationFrame(animate);
 </script>
-  </script>
 </body>
 </html>
